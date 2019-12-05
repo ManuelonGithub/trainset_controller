@@ -303,6 +303,24 @@ inline bool UART1_TxReady(void)
     return !(UART1_FR_R & UART_FR_BUSY);
 }
 
+bool startTransmission(char *packet, int length){
+
+    if (sendState != startTransmit){
+
+        memcpy(UART1.tx.data, packet, length);
+        UART1.tx.rd_ptr = 0;
+        UART1.tx.wr_ptr = length-1;
+
+        UART1_DR_R = STX;
+
+        return true;
+    }
+    //If its busy then enqueue it for later
+    else {
+        return false;
+    }
+
+}
 /**
  * @brief   Send a character from the RX buffer to the kernel IO server.
  */
