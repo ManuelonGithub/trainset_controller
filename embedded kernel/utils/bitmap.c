@@ -105,10 +105,6 @@ inline uint32_t FindSet(bitmap_t* bitmap, uint32_t start, uint32_t end)
     }
 
     return end;
-
-    // get number of fields to check
-    // check if start-end is "field aligned"
-    // if start isn't aligned, check the first
 }
 
 /**
