@@ -9,14 +9,15 @@
 #include <string.h>
 #include "frame_handler.h"
 #include "k_cpu.h"
-
+#include "UART.h"
 #include "k_types.h"
 #include "k_messaging.h"
 
+#define PACKET_BOX  14
 void ioServerSend();
 void discardBuffer();
-void formPacket();
-
+void formPacket(char);
+void transmitFrame();
 enum recvStates {start,validate, ESCByte}; // these names suck im going to change them
 enum sendStates {Wait, startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
 
@@ -74,9 +75,10 @@ void UART1_Init(uart_descriptor_t* descriptor)
 
     NVIC_SYS_PRI1_R = (UART_PRIORITY_LVL);
 
-    UART0_InterruptEnable(INT_VEC_UART1);       // Enable UART0 interrupts
-    UART0_IntEnable(UART_INT_RX | UART_INT_TX); // Enable Receive and Transmit interrupts
+    UART1_InterruptEnable(INT_VEC_UART1);       // Enable UART0 interrupts
+    UART1_IntEnable(UART_INT_RX | UART_INT_TX); // Enable Receive and Transmit interrupts
     recvState = start;
+    sendState = startTransmit;
 }
 
 /**
@@ -120,9 +122,10 @@ void UART1_IntHandler(void)
 
     if (UART1_MIS_R & UART_INT_RX) {
         /* RECV done - clear interrupt and make char available to application */
+        char c = UART1_DR_R;
+        formPacket(c);
+        UART0_put(&c, 1);
         UART1_ICR_R |= UART_INT_RX;
-        formPacket();
-        //ioServerSend();
     }
 
     if (UART1_MIS_R & UART_INT_TX) {
@@ -134,10 +137,10 @@ void UART1_IntHandler(void)
 }
 
 //TODO: i assume inline helps here for interrupt functions but idk
-inline void formPacket(){
+inline void formPacket(char c){
 
     //STX always forces first state.
-    if (UART1_DR_R == STX)
+    if (c == STX)
         recvState = start;
 
     switch (recvState){
@@ -161,11 +164,11 @@ inline void formPacket(){
     case validate:
 
         //If a DLE is received
-        if (UART1_DR_R == DLE)
+        if (c == DLE)
             recvState = ESCByte;
 
         //End of Transmission
-        else if (UART1_DR_R == ETX){
+        else if (c == ETX){
             //Check xmitChecksum
             if (xmitChecksum != -1)
                 discardBuffer();
@@ -176,9 +179,9 @@ inline void formPacket(){
             discardBuffer();
         }
         else {
-            enqueuec(&UART1->rx, UART1_DR_R);
+            enqueuec(&UART1->rx, c);
             xmitLength++;
-            xmitChecksum += UART1_DR_R;
+            xmitChecksum += c;
         }
 
         break;
@@ -186,16 +189,16 @@ inline void formPacket(){
         // Take the next byte regardless
     case ESCByte:
 
-        enqueuec(&UART1->rx, UART1_DR_R);
+        enqueuec(&UART1->rx, c);
         xmitLength++;
-        xmitChecksum+=UART1_DR_R;
+        xmitChecksum+=c;
 
         break;
 
     default:
         //for (;;)
      //   System.out.println("Youre in Java now >:)");
-
+        break;
     }
 }
 
@@ -259,6 +262,7 @@ inline void transmitFrame(){
         break;
     default:
 
+        break;
     }
 }
 
@@ -268,10 +272,7 @@ void discardBuffer(){
 
     xmitLength = 0;
     xmitChecksum = 0;
-    //TODO: i dont know how your thingy works
-    while (&UART1->rx){
-        dequeuec(&UART1->rx);
-    }
+    circular_buffer_init(&UART1->rx);
     badFrame = 1;
 }
 
@@ -298,3 +299,21 @@ inline bool UART1_TxReady(void)
 {
     return !(UART1_FR_R & UART_FR_BUSY);
 }
+
+/**
+ * @brief   Send a character from the RX buffer to the kernel IO server.
+ */
+void sendPacket()
+{
+    uint8_t c = dequeuec(&UART1->rx);
+
+    pmsg_t msg = {
+         .dst = PACKET_BOX,
+         .src = PACKET_BOX,
+         .data = &c,
+         .size = 1
+    };
+
+    k_MsgSend(&msg, NULL);
+}
+
