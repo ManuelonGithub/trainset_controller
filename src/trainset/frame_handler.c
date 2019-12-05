@@ -13,7 +13,7 @@
 #include "k_types.h"
 #include "k_messaging.h"
 
-#define PACKET_BOX  14
+#define PACKET_BOX 14
 void ioServerSend();
 void discardBuffer();
 void formPacket(char);
@@ -152,13 +152,13 @@ inline void formPacket(char c){
 
         if (c == STX) {
             //If length isnt 0 something went wrong with last frame
-            if (xmitLength) {
+            if (recvLength) {
                 discardBuffer();
                 badFrame = 1;
             }
 
-            xmitLength = 0;
-            xmitChecksum = 0;
+            recvLength = 0;
+            recvChecksum = 0;
             recvState = VALIDATE;
         }
 
@@ -174,19 +174,19 @@ inline void formPacket(char c){
         //End of Transmission
         else if (c == ETX){
             //Check xmitChecksum
-            if (xmitChecksum != -1)
+            if (recvChecksum != -1)
                 discardBuffer();
             else
                 sendPacket();
 
         }
-        else if (xmitLength > MAX_LENGTH){
+        else if (recvLength > MAX_LENGTH){
             discardBuffer();
         }
         else {
             enqueuec(&UART1.rx, c);
-            xmitLength++;
-            xmitChecksum += c;
+            recvLength++;
+            recvChecksum += c;
         }
 
         break;
@@ -195,8 +195,8 @@ inline void formPacket(char c){
     case ESCByte:
 
         enqueuec(&UART1.rx, c);
-        xmitLength++;
-        xmitChecksum+=c;
+        recvLength++;
+        recvChecksum+=c;
 
         break;
 
