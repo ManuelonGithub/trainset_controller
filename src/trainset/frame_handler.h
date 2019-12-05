@@ -93,5 +93,6 @@ inline void UART1_putc(char c);
 uint32_t UART1_put(char* data, uint8_t length);
 void UART1_puts(char* data);
 
+bool startTransmission(char *packet, int length);
 
 #endif // UART_H

@@ -34,7 +34,7 @@ void packet_server()
         recv(box, ANY_BOX, (uint8_t*)&rx_pkt, sizeof(packet_t), &src_box);
 
         if (src_box == PACKET_BOX) {
-            startTransmission((uint8_t*)&rx_pkt, (PACKET_META_SIZE+dummy.length));
+            startTransmission((char*)&rx_pkt, (PACKET_META_SIZE+dummy.length));
         }
     }
 }
