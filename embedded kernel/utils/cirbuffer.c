@@ -189,7 +189,10 @@ uint32_t dequeue(circular_buffer_t* buffer, uint8_t* dst_buf, uint32_t length)
     return length;
 }
 
-
+inline char peek(circular_buffer_t* buffer)
+{
+    return buffer->data[buffer->rd_ptr];
+}
 
 /**
  * @brief  Get the size of the buffer/How many characters are currently queued.
