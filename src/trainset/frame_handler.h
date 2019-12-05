@@ -6,8 +6,8 @@
 * @date    2019.10.03 (Last Modified)
 */
 
-#ifndef UART_H
-#define UART_H
+#ifndef UART1_H
+#define UART1_H
 
 #include "cirbuffer.h"
 
@@ -81,7 +81,7 @@ typedef struct uart_descriptor_ {
     bool            echo;
 } uart_descriptor_t;
 
-void UART1_Init(uart_descriptor_t* descriptor);
+void UART1_init();
 void UART1_InterruptEnable(unsigned long InterruptIndex);
 void UART1_IntEnable(unsigned long flags);
 
