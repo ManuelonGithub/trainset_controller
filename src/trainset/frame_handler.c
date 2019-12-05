@@ -1,5 +1,5 @@
 /**
- * @file    uart.c
+ * @file    frame_handler.c
  * @brief   Contains functionality to operate the UART0 driver for the tiva board.
  * @author  Callum Cottrell, Emad Khan (Based on his work)
  * @date    2019.09.18 (Created)
@@ -14,6 +14,22 @@
 #include "k_messaging.h"
 
 void ioServerSend();
+void discardBuffer();
+void formPacket();
+
+enum recvStates {start,validate, ESCByte}; // these names suck im going to change them
+enum sendStates {Wait, startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
+
+int recvState;
+int sendState;
+
+int xmitLength;
+int recvLength; // process that sends STX will also set this extern global
+#define MAX_LENGTH 100 // no idea at the moment what max is
+int xmitChecksum;
+int recvChecksum;
+int badFrame;
+char data;
 
 static uart_descriptor_t* UART1;
 
@@ -60,6 +76,7 @@ void UART1_Init(uart_descriptor_t* descriptor)
 
     UART0_InterruptEnable(INT_VEC_UART1);       // Enable UART0 interrupts
     UART0_IntEnable(UART_INT_RX | UART_INT_TX); // Enable Receive and Transmit interrupts
+    recvState = start;
 }
 
 /**
@@ -86,4 +103,198 @@ void UART1_IntEnable(unsigned long flags)
     UART1_IM_R |= flags;
 }
 
+/**
+ * @brief   Interrupt Handler for UART1 (from atmel).
+ */
+void UART1_IntHandler(void)
+{
+    //Uncomment to test that the UART1 is initialized correctly
+//    if (UART1_MIS_R & UART_INT_RX) {
+//        /* RECV done - clear interrupt and make char available to application */
+//        UART1_ICR_R |= UART_INT_RX;
+//
+//        enqueuec(&UART1->rx, UART1_DR_R);
+//
+//        ioServerSend();
+//    }
 
+    if (UART1_MIS_R & UART_INT_RX) {
+        /* RECV done - clear interrupt and make char available to application */
+        UART1_ICR_R |= UART_INT_RX;
+        formPacket();
+        //ioServerSend();
+    }
+
+    if (UART1_MIS_R & UART_INT_TX) {
+        /* XMIT done - clear interrupt */
+        UART1_ICR_R |= UART_INT_TX;
+        transmitFrame();
+    }
+
+}
+
+//TODO: i assume inline helps here for interrupt functions but idk
+inline void formPacket(){
+
+    //STX always forces first state.
+    if (UART1_DR_R == STX)
+        recvState = start;
+
+    switch (recvState){
+
+    //Begin receiving a frame
+    case start:
+
+        //If length isnt 0 something went wrong with last frame
+        if (xmitLength){
+            discardBuffer();
+            badFrame = 1;
+        }
+
+        xmitLength = 0;
+        xmitChecksum = 0;
+        recvState = validate;
+
+        break;
+
+    //Regular receive in the middle of a frame
+    case validate:
+
+        //If a DLE is received
+        if (UART1_DR_R == DLE)
+            recvState = ESCByte;
+
+        //End of Transmission
+        else if (UART1_DR_R == ETX){
+            //Check xmitChecksum
+            if (xmitChecksum != -1)
+                discardBuffer();
+            //else
+                //Send the buffer here? IPC?
+        }
+        else if (xmitLength > MAX_LENGTH){
+            discardBuffer();
+        }
+        else {
+            enqueuec(&UART1->rx, UART1_DR_R);
+            xmitLength++;
+            xmitChecksum += UART1_DR_R;
+        }
+
+        break;
+
+        // Take the next byte regardless
+    case ESCByte:
+
+        enqueuec(&UART1->rx, UART1_DR_R);
+        xmitLength++;
+        xmitChecksum+=UART1_DR_R;
+
+        break;
+
+    default:
+        //for (;;)
+     //   System.out.println("Youre in Java now >:)");
+
+    }
+}
+
+inline void transmitFrame(){
+
+   // data = peek_buffer(&UART1->tx);
+
+    switch (sendState){
+
+    case Wait:
+        sendState = startTransmit;
+        break;
+
+    case startTransmit:
+        xmitChecksum = 0;
+        //STX already sent. thats why were in the UART1 handler.
+        xmitLength = buffer_size(&UART1->tx); //might not need the length
+           // if we use the bufferSize instead
+        sendState = xmitPacket;
+
+        //regular transmit
+    case xmitPacket:
+        //If this byte is a problem byte
+        if (data == DLE || data == STX  || data == ETX ){
+            sendState = ESC;
+            UART1_putc(DLE);
+        }
+        //If the buffer has been fully transmitted prep checksum
+        else if (!buffer_size(&UART1->tx)){
+            xmitChecksum = ~xmitChecksum;
+            if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX)
+                sendState = ESC2;
+            else
+                sendState = sendChecksum;
+        }
+        else {
+            xmitChecksum += data;
+            UART1_putc(dequeuec(&UART1->tx));
+        }
+        break;
+
+    case ESC:
+        sendState = xmitPacket;
+        xmitChecksum += data;
+        UART1_putc(dequeuec(&UART1->tx));
+        break;
+        //The escape that preludes checksum
+    case ESC2:
+        sendState = sendChecksum;
+        UART1_putc(DLE);
+        break;
+
+    case sendChecksum:
+        sendState = sendETX;
+        UART1_putc(xmitChecksum);
+        break;
+
+    case sendETX:
+        sendState = Wait;
+        UART1_putc(ETX);
+        break;
+    default:
+
+    }
+}
+
+
+//Dequeue everything, buffer was crap
+void discardBuffer(){
+
+    xmitLength = 0;
+    xmitChecksum = 0;
+    //TODO: i dont know how your thingy works
+    while (&UART1->rx){
+        dequeuec(&UART1->rx);
+    }
+    badFrame = 1;
+}
+
+/**
+ * @brief   Send a character to UART 0.
+ * @param   [in] c: Character to be transmitted.
+ * @details It sends a character to UART0's data register
+ *          when the UART0 peripheral is ready to transmit.
+ *          This function is blocking program progression
+ *          while UART0 isn't ready to transmit.
+ */
+inline void UART1_putc(char c)
+{
+    while(!UART1_TxReady());
+    UART1_DR_R = c;
+}
+/**
+ *
+ * @brief   Determines if UART 0 is ready to transmit.
+ * @return  [bool] True if ready, false if busy.
+ * @details TX ready is based in the BUSY flag in the UART 0's flag register.
+ */
+inline bool UART1_TxReady(void)
+{
+    return !(UART1_FR_R & UART_FR_BUSY);
+}

@@ -65,6 +65,11 @@
 #define UART0_ECHO_ON     true
 #define UART0_ECHO_OFF    false
 
+#define STX 0x02
+#define ETX 0x03
+#define DLE 0x10
+
+
 /**
  * @brief   UART descriptor structure
  * @details contains the rx and tx circular buffers
@@ -75,6 +80,18 @@ typedef struct uart_descriptor_ {
     circular_buffer_t   rx;
     bool            echo;
 } uart_descriptor_t;
+
+void UART1_Init(uart_descriptor_t* descriptor);
+void UART1_InterruptEnable(unsigned long InterruptIndex);
+void UART1_IntEnable(unsigned long flags);
+
+void UART1_IntHandler(void);    // Dunno if this should be here tbh...
+
+inline bool UART1_TxReady(void);
+
+inline void UART1_putc(char c);
+uint32_t UART1_put(char* data, uint8_t length);
+void UART1_puts(char* data);
 
 
 #endif // UART_H
