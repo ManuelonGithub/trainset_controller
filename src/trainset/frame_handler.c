@@ -18,7 +18,8 @@ void ioServerSend();
 void discardBuffer();
 void formPacket(char);
 void transmitFrame();
-enum recvStates {start,validate, ESCByte}; // these names suck im going to change them
+
+enum recvStates {START,VALIDATE, ESCByte}; // these names suck im going to change them
 enum sendStates {Wait, startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
 
 int recvState;
@@ -26,13 +27,14 @@ int sendState;
 
 int xmitLength;
 int recvLength; // process that sends STX will also set this extern global
-#define MAX_LENGTH 100 // no idea at the moment what max is
+#define MAX_LENGTH 256 // no idea at the moment what max is\
+
 int xmitChecksum;
 int recvChecksum;
 int badFrame;
 char data;
 
-static uart_descriptor_t* UART1;
+static uart_descriptor_t UART1;
 
 /**
  * @brief   Initializes the control registers for UART0 and the UART descriptor
@@ -43,7 +45,7 @@ static uart_descriptor_t* UART1;
  *
  * @todo    Convert the boolean configurations into a bit-style configuration.
  */
-void UART1_Init(uart_descriptor_t* descriptor)
+void UART1_init(uart_descriptor_t* descriptor)
 {
     volatile int wait;
 
@@ -68,16 +70,14 @@ void UART1_Init(uart_descriptor_t* descriptor)
     UART1_CTL_R = UART_CTL_UARTEN;        // Enable the UART
     wait = 0; // wait; give UART time to enable itself.
 
-    UART1 = descriptor;
-
-    circular_buffer_init(&UART1->tx);
-    circular_buffer_init(&UART1->rx);
+    circular_buffer_init(&UART1.tx);
+    circular_buffer_init(&UART1.rx);
 
     NVIC_SYS_PRI1_R = (UART_PRIORITY_LVL);
 
     UART1_InterruptEnable(INT_VEC_UART1);       // Enable UART0 interrupts
     UART1_IntEnable(UART_INT_RX | UART_INT_TX); // Enable Receive and Transmit interrupts
-    recvState = start;
+    recvState = START;
     sendState = startTransmit;
 }
 
@@ -141,12 +141,12 @@ inline void formPacket(char c){
 
     //STX always forces first state.
     if (c == STX)
-        recvState = start;
+        recvState = START;
 
     switch (recvState){
 
     //Begin receiving a frame
-    case start:
+    case START:
 
         //If length isnt 0 something went wrong with last frame
         if (xmitLength){
@@ -156,12 +156,12 @@ inline void formPacket(char c){
 
         xmitLength = 0;
         xmitChecksum = 0;
-        recvState = validate;
+        recvState = VALIDATE;
 
         break;
 
     //Regular receive in the middle of a frame
-    case validate:
+    case VALIDATE:
 
         //If a DLE is received
         if (c == DLE)
@@ -172,14 +172,15 @@ inline void formPacket(char c){
             //Check xmitChecksum
             if (xmitChecksum != -1)
                 discardBuffer();
-            //else
-                //Send the buffer here? IPC?
+            else
+                sendPacket();
+
         }
         else if (xmitLength > MAX_LENGTH){
             discardBuffer();
         }
         else {
-            enqueuec(&UART1->rx, c);
+            enqueuec(&UART1.rx, c);
             xmitLength++;
             xmitChecksum += c;
         }
@@ -189,7 +190,7 @@ inline void formPacket(char c){
         // Take the next byte regardless
     case ESCByte:
 
-        enqueuec(&UART1->rx, c);
+        enqueuec(&UART1.rx, c);
         xmitLength++;
         xmitChecksum+=c;
 
@@ -215,7 +216,7 @@ inline void transmitFrame(){
     case startTransmit:
         xmitChecksum = 0;
         //STX already sent. thats why were in the UART1 handler.
-        xmitLength = buffer_size(&UART1->tx); //might not need the length
+        xmitLength = buffer_size(&UART1.tx); //might not need the length
            // if we use the bufferSize instead
         sendState = xmitPacket;
 
@@ -224,10 +225,10 @@ inline void transmitFrame(){
         //If this byte is a problem byte
         if (data == DLE || data == STX  || data == ETX ){
             sendState = ESC;
-            UART1_putc(DLE);
+            UART1_DR_R = DLE;
         }
         //If the buffer has been fully transmitted prep checksum
-        else if (!buffer_size(&UART1->tx)){
+        else if (!buffer_size(&UART1.tx)){
             xmitChecksum = ~xmitChecksum;
             if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX)
                 sendState = ESC2;
@@ -236,29 +237,31 @@ inline void transmitFrame(){
         }
         else {
             xmitChecksum += data;
-            UART1_putc(dequeuec(&UART1->tx));
+            UART1_DR_R = dequeuec(&UART1.tx);
         }
         break;
 
     case ESC:
         sendState = xmitPacket;
         xmitChecksum += data;
-        UART1_putc(dequeuec(&UART1->tx));
+        UART1_DR_R = dequeuec(&UART1.tx);
         break;
         //The escape that preludes checksum
     case ESC2:
         sendState = sendChecksum;
-        UART1_putc(DLE);
+        UART1_DR_R = DLE;
         break;
 
     case sendChecksum:
         sendState = sendETX;
-        UART1_putc(xmitChecksum);
+        UART1_DR_R = xmitChecksum;
+
         break;
 
     case sendETX:
         sendState = Wait;
-        UART1_putc(ETX);
+        UART1_DR_R = ETX;
+
         break;
     default:
 
@@ -272,7 +275,7 @@ void discardBuffer(){
 
     xmitLength = 0;
     xmitChecksum = 0;
-    circular_buffer_init(&UART1->rx);
+    circular_buffer_init(&UART1.rx);
     badFrame = 1;
 }
 
@@ -305,13 +308,11 @@ inline bool UART1_TxReady(void)
  */
 void sendPacket()
 {
-    uint8_t c = dequeuec(&UART1->rx);
-
     pmsg_t msg = {
          .dst = PACKET_BOX,
          .src = PACKET_BOX,
-         .data = &c,
-         .size = 1
+         .data = (uint8_t*)&UART1.rx.data,
+         .size = buffer_size(&UART1.rx)
     };
 
     k_MsgSend(&msg, NULL);

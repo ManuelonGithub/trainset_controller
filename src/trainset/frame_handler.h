@@ -81,7 +81,7 @@ typedef struct uart_descriptor_ {
     bool            echo;
 } uart_descriptor_t;
 
-void UART1_Init(uart_descriptor_t* descriptor);
+void UART1_init();
 void UART1_InterruptEnable(unsigned long InterruptIndex);
 void UART1_IntEnable(unsigned long flags);
 

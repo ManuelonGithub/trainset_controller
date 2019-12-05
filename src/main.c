@@ -120,6 +120,7 @@
  */
 
 #include "k_handlers.h"
+#include "frame_handler.h"
 #include "calls.h"
 #include <string.h>
 
@@ -132,6 +133,8 @@
 int main(void)
 {
     kernel_init();
+
+    UART1_init();
 
     /* Place Process Create requests here */
 
