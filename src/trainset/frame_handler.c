@@ -152,7 +152,7 @@ inline void formPacket(char c){
     case START:
 
         //If length isnt 0 something went wrong with last frame
-        if (xmitLength){
+        if (xmitLength || c != STX){
             discardBuffer();
             badFrame = 1;
         }
