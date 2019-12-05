@@ -18,6 +18,7 @@ void ioServerSend();
 void discardBuffer();
 void formPacket(char);
 void transmitFrame();
+void sendPacket();
 
 enum recvStates {START,VALIDATE, ESCByte}; // these names suck im going to change them
 enum sendStates {Wait, startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
