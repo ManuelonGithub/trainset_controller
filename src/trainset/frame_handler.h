@@ -65,6 +65,11 @@
 #define UART0_ECHO_ON     true
 #define UART0_ECHO_OFF    false
 
+#define STX 0x02
+#define ETX 0x03
+#define DLE 0x10
+
+
 /**
  * @brief   UART descriptor structure
  * @details contains the rx and tx circular buffers
