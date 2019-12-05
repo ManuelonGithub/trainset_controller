@@ -16,12 +16,17 @@
 void ioServerSend();
 void discardBuffer();
 
-enum recvStates {start, validate, ESCByte}; // these names suck im going to change them
-int recvState;
+enum recvStates {start,validate, ESCByte}; // these names suck im going to change them
+enum sendStates {startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
 
-int length;
+int recvState;
+int sendState;
+
+int xmitLength;
+int recvLength;
 #define MAX_LENGTH 100 // no idea at the moment what max is
-int checksum;
+int xmitChecksum;
+int recvChecksum;
 int badFrame;
 
 static uart_descriptor_t* UART1;
@@ -138,13 +143,13 @@ inline void receivePacket(){
     case start:
 
         //If length isnt 0 something went wrong with last frame
-        if (length){
+        if (xmitLength){
             discardBuffer();
             badFrame = 1;
         }
 
-        length = 0;
-        checksum = 0;
+        xmitLength = 0;
+        xmitChecksum = 0;
         recvState = validate;
 
         break;
@@ -158,19 +163,19 @@ inline void receivePacket(){
 
         //End of Transmission
         else if (UART1_DR_R == ETX){
-            //Check checksum
-            if (checksum != -1)
+            //Check xmitChecksum
+            if (xmitChecksum != -1)
                 discardBuffer();
             //else
                 //Send the buffer here? IPC?
         }
-        else if (length > MAX_LENGTH){
+        else if (xmitLength > MAX_LENGTH){
             discardBuffer();
         }
         else {
             enqueuec(&UART1->rx, UART1_DR_R);
-            length++;
-            checksum += UART1_DR_R;
+            xmitLength++;
+            xmitChecksum += UART1_DR_R;
         }
 
         break;
@@ -179,8 +184,8 @@ inline void receivePacket(){
     case ESCByte:
 
         enqueuec(&UART1->rx, UART1_DR_R);
-        length++;
-        checksum+=UART1_DR_R;
+        xmitLength++;
+        xmitChecksum+=UART1_DR_R;
 
         break;
 
@@ -190,11 +195,41 @@ inline void receivePacket(){
     }
 }
 
+inline void transmitFrame(){
+
+    switch (sendState){
+
+    case startTransmit:
+        recvChecksum = 0;
+        //STX already sent. thats why were in the UART1 handler.
+        //recvLength =
+        break;
+    case xmitPacket:
+
+        break;
+    case ESC:
+
+        break;
+    case ESC2:
+
+        break;
+    case sendChecksum:
+
+        break;
+    case sendETX:
+
+        break;
+    default:
+
+    }
+}
+
+
 //Dequeue everything, buffer was crap
 void discardBuffer(){
 
-    length = 0;
-    checksum = 0;
+    xmitLength = 0;
+    xmitChecksum = 0;
     //TODO: i dont know how your thingy works
     while (&UART1->rx){
         dequeuec(&UART1->rx);
