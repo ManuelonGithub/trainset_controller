@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "packet_handler.h"
+#include "frame_handler.h"
+#include "calls.h"
 
 void packet_server()
 {
@@ -24,7 +26,7 @@ void packet_server()
 
     dummy.data[0] = 0xC0;
     dummy.data[1] = 0xFF;
-    dummy.data[2] = 0x‭81‬;
+    dummy.data[2] = 0x81;
 
     dummy.length = 3;
 

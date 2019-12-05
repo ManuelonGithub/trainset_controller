@@ -13,7 +13,7 @@
 
 #define PACKET_META_SIZE    2
 
-typedef struct PACKET_TYPES_ {DATA, ACK, NACK} packet_type_t;
+typedef enum PACKET_TYPES_ {DATA, ACK, NACK} packet_type_t;
 
 typedef struct packet_ctrl_ {
     uint8_t         nr : 3;
