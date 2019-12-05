@@ -28,7 +28,7 @@ int main(void)
     UART1_init();
 
     /* Place Process Create requests here */
-    process_attr_t attr = {.id = 0, .priority = 2, .name = "Packet Server"};
+    process_attr_t attr = {.id = 0, .priority = 2, .name = "Packet Server", .arg = NULL};
     pcreate(&attr, &packet_server);
 
     /*                                    */

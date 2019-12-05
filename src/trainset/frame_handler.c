@@ -46,7 +46,7 @@ static uart_descriptor_t UART1;
  *
  * @todo    Convert the boolean configurations into a bit-style configuration.
  */
-void UART1_init(uart_descriptor_t* descriptor)
+void UART1_init()
 {
     volatile int wait;
 
@@ -80,6 +80,8 @@ void UART1_init(uart_descriptor_t* descriptor)
     UART1_IntEnable(UART_INT_RX | UART_INT_TX); // Enable Receive and Transmit interrupts
     recvState = START;
     sendState = startTransmit;
+
+    UART1_ICR_R |= UART_INT_RX;
 }
 
 /**
