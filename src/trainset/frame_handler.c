@@ -127,7 +127,6 @@ void UART1_IntHandler(void)
         /* RECV done - clear interrupt and make char available to application */
         char c = UART1_DR_R;
         formPacket(c);
-        UART0_put(&c, 1);
         UART1_ICR_R |= UART_INT_RX;
     }
 
@@ -151,15 +150,17 @@ inline void formPacket(char c){
     //Begin receiving a frame
     case START:
 
-        //If length isnt 0 something went wrong with last frame
-        if (xmitLength || c != STX){
-            discardBuffer();
-            badFrame = 1;
-        }
+        if (c == STX) {
+            //If length isnt 0 something went wrong with last frame
+            if (xmitLength) {
+                discardBuffer();
+                badFrame = 1;
+            }
 
-        xmitLength = 0;
-        xmitChecksum = 0;
-        recvState = VALIDATE;
+            xmitLength = 0;
+            xmitChecksum = 0;
+            recvState = VALIDATE;
+        }
 
         break;
 
