@@ -81,5 +81,17 @@ typedef struct uart_descriptor_ {
     bool            echo;
 } uart_descriptor_t;
 
+void UART1_Init(uart_descriptor_t* descriptor);
+void UART1_InterruptEnable(unsigned long InterruptIndex);
+void UART1_IntEnable(unsigned long flags);
+
+void UART1_IntHandler(void);    // Dunno if this should be here tbh...
+
+inline bool UART1_TxReady(void);
+
+inline void UART1_putc(char c);
+uint32_t UART1_put(char* data, uint8_t length);
+void UART1_puts(char* data);
+
 
 #endif // UART_H
