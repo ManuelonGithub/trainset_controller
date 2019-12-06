@@ -30,12 +30,12 @@ int xmitLength;
 int recvLength; // process that sends STX will also set this extern global
 #define MAX_LENGTH 256 // no idea at the moment what max is\
 
-int xmitChecksum;
-int recvChecksum;
+int8_t xmitChecksum;
+int8_t recvChecksum;
 int badFrame;
 char data;
 
-static uart_descriptor_t UART1;
+static uart_descriptor_t uart1;
 
 /**
  * @brief   Initializes the control registers for UART0 and the UART descriptor
@@ -71,8 +71,8 @@ void UART1_init()
     UART1_CTL_R = UART_CTL_UARTEN;        // Enable the UART
     wait = 0; // wait; give UART time to enable itself.
 
-    circular_buffer_init(&UART1.tx);
-    circular_buffer_init(&UART1.rx);
+    circular_buffer_init(&uart1.tx);
+    circular_buffer_init(&uart1.rx);
 
     NVIC_SYS_PRI1_R = (UART_PRIORITY_LVL);
 
@@ -176,15 +176,18 @@ inline void formPacket(char c){
             //Check xmitChecksum
             if (recvChecksum != -1)
                 discardBuffer();
-            else
+            else{
+                //remove the checksum and send to packet controller
+                dequeuec(&uart1.rx);
                 sendPacket();
-
+            }
+            recvState = START;
         }
         else if (recvLength > MAX_LENGTH){
             discardBuffer();
         }
         else {
-            enqueuec(&UART1.rx, c);
+            enqueuec(&uart1.rx, c);
             recvLength++;
             recvChecksum += c;
         }
@@ -194,7 +197,8 @@ inline void formPacket(char c){
         // Take the next byte regardless
     case ESCByte:
 
-        enqueuec(&UART1.rx, c);
+        recvState = VALIDATE;
+        enqueuec(&uart1.rx, c);
         recvLength++;
         recvChecksum+=c;
 
@@ -209,7 +213,7 @@ inline void formPacket(char c){
 
 inline void transmitFrame(){
 
-   // data = peek_buffer(&UART1->tx);
+    data = peek(&uart1.tx);
 
     switch (sendState){
 
@@ -220,7 +224,7 @@ inline void transmitFrame(){
     case startTransmit:
         xmitChecksum = 0;
         //STX already sent. thats why were in the UART1 handler.
-        xmitLength = buffer_size(&UART1.tx); //might not need the length
+        xmitLength = buffer_size(&uart1.tx); //might not need the length
            // if we use the bufferSize instead
         sendState = xmitPacket;
 
@@ -232,28 +236,27 @@ inline void transmitFrame(){
             UART1_DR_R = DLE;
         }
         //If the buffer has been fully transmitted prep checksum
-        else if (!buffer_size(&UART1.tx)){
+        else if (!buffer_size(&uart1.tx)){
             xmitChecksum = ~xmitChecksum;
-            if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX)
-                sendState = ESC2;
-            else
+            if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX){
                 sendState = sendChecksum;
+                UART1_DR_R = DLE;
+            }
+            else{
+                sendState = sendETX;
+                UART1_DR_R = xmitChecksum;
+            }
         }
         else {
             xmitChecksum += data;
-            UART1_DR_R = dequeuec(&UART1.tx);
+            UART1_DR_R = dequeuec(&uart1.tx);
         }
         break;
 
     case ESC:
         sendState = xmitPacket;
         xmitChecksum += data;
-        UART1_DR_R = dequeuec(&UART1.tx);
-        break;
-        //The escape that preludes checksum
-    case ESC2:
-        sendState = sendChecksum;
-        UART1_DR_R = DLE;
+        UART1_DR_R = dequeuec(&uart1.tx);
         break;
 
     case sendChecksum:
@@ -277,9 +280,9 @@ inline void transmitFrame(){
 //Dequeue everything, buffer was crap
 void discardBuffer(){
 
-    xmitLength = 0;
-    xmitChecksum = 0;
-    circular_buffer_init(&UART1.rx);
+    recvLength = 0;
+    recvChecksum = 0;
+    circular_buffer_init(&uart1.rx);
     badFrame = 1;
 }
 
@@ -309,11 +312,11 @@ inline bool UART1_TxReady(void)
 
 bool startTransmission(char *packet, int length){
 
-    if (sendState != startTransmit){
+    if (sendState == startTransmit){
 
-        memcpy(UART1.tx.data, packet, length);
-        UART1.tx.rd_ptr = 0;
-        UART1.tx.wr_ptr = length-1;
+        memcpy(uart1.tx.data, packet, length);
+        uart1.tx.rd_ptr = 0;
+        uart1.tx.wr_ptr = length-1;
 
         UART1_DR_R = STX;
 
@@ -333,8 +336,8 @@ void sendPacket()
     pmsg_t msg = {
          .dst = PACKET_BOX,
          .src = PACKET_BOX,
-         .data = (uint8_t*)&UART1.rx.data,
-         .size = buffer_size(&UART1.rx)
+         .data = (uint8_t*)&uart1.rx.data,
+         .size = buffer_size(&uart1.rx)
     };
 
     k_MsgSend(&msg, NULL);
