@@ -8,12 +8,13 @@
 #include "trainset_defs.h"
 #include "calls.h"
 
-static packet_table_t   pkTable;
-static packet_tracker_t pkTracker;
+static packet_table_t   pkTable;    // Too big to be an automatic
 
 void packet_server()
 {
-    initPacketServer();
+    packet_tracker_t tracker;
+
+    initPacketServer(&tracker);
 
     pmbox_t box = bind(PACKET_BOX), src_box;
 
@@ -24,8 +25,8 @@ void packet_server()
     packet_t*   rx_pkt = (packet_t*)&rx_data;
 
     packet_t dummy;
-    dummy.ctrl.nr = 0;
-    dummy.ctrl.ns = 0;
+    dummy.ctrl.Nr = 0;
+    dummy.ctrl.Ns = 0;
     dummy.ctrl.type = DATA;
 
     dummy.data[0] = 0xC0;
@@ -34,51 +35,62 @@ void packet_server()
 
     dummy.length = 3;
 
+    sendPacket(&dummy, &tracker);
+
     while(1) {
-        startTransmission((char*)&dummy, (PACKET_META_SIZE+dummy.length));
         rx_size = recv(box, ANY_BOX, (uint8_t*)&rx_pkt, sizeof(packet_t), &src_box);
 
+        // Process Received message
         if (src_box == PACKET_BOX) {
-            processTrainsetPacket(rx_pkt);
+            processTrainsetPacket(rx_pkt, &tracker);
         }
         else {
             processControlMessage(rx_data, rx_size, src_box);
         }
 
-        if (Packet)
+        // Send Pending Packets
+        while (tracker.Ns != pkTable.free &&
+                sendPacket(&pkTable.packet[tracker.Ns], &tracker)) {}
+
+        // Send an acknowledge packet if necessary
+        if (tracker.pend_ack)   tracker.pend_ack = sendAck(&tracker);
     }
 }
 
-void initPacketServer()
+void initPacketServer(packet_tracker_t* tracker)
 {
-    pkTracker.Nr = 0;
-    pkTracker.Ns = 0;
-    pkTable.free_ptr = 0;
-    pkTable.valid_ptr = 0;
+    pkTable.free = 0;
+    pkTable.valid = 0;
     pkTable.full = 0;
+
+    tracker->Nr = 0;
+    tracker->Ns = 0;
+    tracker->pend_ack = false;
 }
 
-void processTrainsetPacket(packet_t* pkt)
+void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
 {
     switch (pkt->ctrl.type) {
         case DATA: {
-            if (pkTracker.Nr == pkt->ctrl.ns) {
-                PKT_TRACK_MOV(pkTracker.Nr);
+            if (tracker->Nr == pkt->ctrl.Ns) {
+                PKT_MOV(tracker->Nr);
                 send(TRACK_BOX, PACKET_BOX, pkt->data, pkt->length);
 
-                flushPacketTable(pkt->ctrl.nr-1);
+                flushPacketTable(pkt->ctrl.Nr-1);
+
+                tracker->pend_ack = true;
             }
             else {
-                SendNack();
+                sendNack(tracker);
             }
         } break;
 
         case ACK: {
-            flushPacketTable(pkt->ctrl.nr-1);
+            flushPacketTable(pkt->ctrl.Nr-1);
         } break;
 
         case NACK: {
-            pkTracker.Ns = pkt->ctrl.nr;
+            tracker->Ns = pkt->ctrl.Nr;
         } break;
 
         default: break;
@@ -87,71 +99,86 @@ void processTrainsetPacket(packet_t* pkt)
 
 inline void flushPacketTable(uint8_t LastReceived)
 {
-    packet_entry_t* pkt_e;
+    packet_t*   pkt;
+    pmbox_t     src;
 
-    while (pkTable.valid_ptr <= LastReceived) {
-        pkt_e = &pkTable.entry[pkTable.valid_ptr];
+    // Going under the assumption last received is always lagging table's free pointer.
+    while (pkTable.valid <= LastReceived) {
+        pkt = &pkTable.packet[pkTable.valid];
+        src = pkTable.packetSrc[pkTable.valid];
 
         // Send confirmation message
-        send(pkt_e->src_box, PACKET_BOX, pkt_e->packet.data, pkt_e->packet.length);
+        send(src, PACKET_BOX, pkt->data, pkt->length);
 
         // Move last valid position
-        PKT_TRACK_MOV(pkTable.valid_ptr);
+        PKT_MOV(pkTable.valid);
     }
 
     // Packets have been discarded, so there are packets available to be queued.
     pkTable.full = false;
 }
 
-inline void SendAck()
+inline bool sendPacket(packet_t* pkt, packet_tracker_t* tracker)
+{
+    pkt->ctrl.Ns = tracker->Ns;
+    pkt->ctrl.Nr = tracker->Nr;
+
+    if (startTransmission((char*)pkt, (PACKET_META_SIZE+pkt->length))) {
+        // Data packet TX successful, no need to send any ACKs
+        tracker->pend_ack = false;
+        PKT_MOV(tracker->Ns);
+        return true;
+    }
+
+    return false;
+}
+
+inline bool sendAck(packet_tracker_t* tracker)
 {
     packet_t pkt;
 
     pkt.ctrl.type = ACK;
-    pkt.ctrl.nr = pkTracker.Nr;
+    pkt.ctrl.Nr = tracker->Nr;
     pkt.length = 0;
 
-    startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length));
+    return startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length));
 }
 
-inline void SendNack()
+inline void sendNack(packet_tracker_t* tracker)
 {
     packet_t pkt;
-
     pkt.ctrl.type = NACK;
-    pkt.ctrl.nr = pkTracker.Nr;
+    pkt.ctrl.Nr = tracker->Nr;
     pkt.length = 0;
 
-    startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length));
+    while (!startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length))) {}
 }
 
 bool processControlMessage(uint8_t* data, size_t size, pmbox_t src_box)
 {
     bool retval = false;
 
-    packet_entry_t* pkEntry;
+    packet_t* pkt;
 
     if (!pkTable.full) {
         // There's room in the table for a packet
         retval = true;
 
-        pkEntry = &pkTable.entry[pkTable.free_ptr];
+        pkt = &pkTable.packet[pkTable.free];
 
-        pkEntry->src_box = src_box;
+        pkTable.packetSrc[pkTable.free] = src_box;
 
-        memcpy(pkEntry->packet.length, data, size);
-        pkEntry->packet.length = size;
+        memcpy(pkt->data, data, size);
+        pkt->length = size;
+        pkt->ctrl.type = DATA;
 
-        PKT_TRACK_MOV(pkTable.free_ptr);
+        PKT_MOV(pkTable.free);
 
-        pkTable.full = (pkTable.free_ptr == pkTable.valid_ptr);
+        pkTable.full = (pkTable.free == pkTable.valid);
     }
 
     return retval;
 }
-
-
-
 
 
 
