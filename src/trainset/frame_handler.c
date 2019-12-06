@@ -179,7 +179,7 @@ inline void formPacket(char c){
             else{
                 //remove the checksum and send to packet controller
                 dequeuec(&uart1.rx);
-                sendPacket();
+                sendPacketServer();
             }
             recvState = START;
         }

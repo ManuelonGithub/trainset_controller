@@ -14,6 +14,8 @@
 
 typedef enum TRAIN_DIRECTIONS {CW, CCW} direction_t;
 
+typedef enum SWITCH_POSITIONS {DIVERTED, STRAIGHT} switch_pos_t;
+
 typedef enum SENSOR_CODES {
     SENSOR_TRIGGERED    = 0xA0,
     SENSOR_TRIG_ACK     = 0xA2,
