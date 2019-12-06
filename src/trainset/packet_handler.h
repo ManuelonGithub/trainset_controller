@@ -5,9 +5,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "k_types.h"
 
-#define PACKET_BOX          14
 #define PACKET_MAX          8
 #define PACKET_DATA_MAX     256
 
@@ -34,16 +34,32 @@ typedef struct packet_entry_ {
 } packet_entry_t;
 
 typedef struct packet_table_ {
-    packet_entry_t  packet[PACKET_MAX];
-    uint8_t         last_valid;
-    uint8_t         Ns;
-    uint8_t         Nr;
+    packet_entry_t  entry[PACKET_MAX];
+    uint8_t         valid_ptr;
+    uint8_t         free_ptr;
+    bool            full;
 } packet_table_t;
 
+#define PKT_TRACK_MOV(ptr) (ptr = (ptr + 1) & (PACKET_MAX-1))
+
+typedef struct packet_tracker_ {
+    uint8_t         Ns;
+    uint8_t         Nr;
+} packet_tracker_t;
 
 void packet_server();
-void initPacketServer(packet_table_t* table, packet_t* ack);
+void initPacketServer();
 
+void processTrainsetPacket(packet_t* pkt);
+bool processControlMessage(uint8_t* data, size_t size, pmbox_t src_box);
 
+inline void flushPacketTable(uint8_t LastReceived);
+
+inline void SendAck();
+inline void SendNack();
+
+inline uint8_t pktTableSpace(packet_table_t* table);
+inline void pktTableEnqueue(packet_table_t* table);
+inline void pktTableDequeue(packet_table_t* table);
 
 #endif // PACKET_HANDLER_H
