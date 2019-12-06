@@ -18,7 +18,7 @@ void ioServerSend();
 void discardBuffer();
 void formPacket(char);
 void transmitFrame();
-void sendPacket();
+void sendPacketServer();
 
 enum recvStates {START,VALIDATE, ESCByte}; // these names suck im going to change them
 enum sendStates {Wait, startTransmit, xmitPacket, ESC, ESC2, sendChecksum, sendETX};
@@ -331,7 +331,7 @@ bool startTransmission(char *packet, int length){
 /**
  * @brief   Send a character from the RX buffer to the kernel IO server.
  */
-void sendPacket()
+void sendPacketServer()
 {
     pmsg_t msg = {
          .dst = PACKET_BOX,

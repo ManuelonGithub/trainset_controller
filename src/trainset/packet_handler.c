@@ -29,7 +29,7 @@ void packet_server()
     dummy.ctrl.Ns = 0;
     dummy.ctrl.type = DATA;
 
-    dummy.data[0] = 0xC0;
+    dummy.data[0] = TRAIN_MOVE;
     dummy.data[1] = 0xFF;
     dummy.data[2] = 0x81;
 
