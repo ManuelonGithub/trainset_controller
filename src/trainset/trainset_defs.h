@@ -12,39 +12,50 @@
 #define TRACK_NAME  "Track Manager"
 #define TRAIN_NAME  "Train Manager"
 
-typedef enum TRAIN_DIRECTIONS {CW, CCW} direction_t;
-typedef enum SWITCH_POSITIONS {DIVERTED, STRAIGHT} switch_pos_t;
+typedef uint8_t direction_t;
+typedef uint8_t sw_pos_t;
+typedef uint8_t speed_t;
+typedef uint8_t switch_t;
+typedef uint8_t targ_t;
 
-typedef enum SENSOR_CODES {
+enum TRAIN_DIRECTIONS {CW, CCW};
+enum SWITCH_POSITIONS {DIVERTED, STRAIGHT};
+
+typedef uint8_t code_t;
+typedef code_t sensor_code_t;
+typedef code_t train_code_t;
+typedef code_t switch_code_t;
+
+enum SENSOR_CODES {
     SENSOR_TRIGGERED    = 0xA0,
     SENSOR_TRIG_ACK     = 0xA2,
     SENSOR_RESET        = 0xA8,
     SENSOR_RST_ACK      = 0xAA
-} sensor_code_t;
+};
 
-typedef enum TRAIN_CODES {
+enum TRAIN_CODES {
     TRAIN_MOVE    = 0xC0,
     TRAIN_ACK     = 0xC2
-} train_code_t;
+};
 
-typedef enum SWITCH_CODES {
+enum SWITCH_CODES {
     SWITCH_THROW    = 0xE0,
     SWITCH_ACK      = 0xE2
-} switch_code_t;
+};
 
 #define ACK_SUCCESS 0
 #define ACK_FAILURE 1
 
 typedef struct trainset_msg_ {
-    uint8_t code;
-    uint8_t arg1;
-    uint8_t arg2;
+    code_t code;
+    targ_t arg1;
+    targ_t arg2;
 } trainset_msg_t;
 
 typedef union train_ctrl_ {
-    uint8_t arg;
+    targ_t arg;
     struct {
-        uint8_t     mag : 4;
+        speed_t     mag : 4;
         uint8_t     res : 3;
         direction_t dir : 1;
     };

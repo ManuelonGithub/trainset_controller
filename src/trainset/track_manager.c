@@ -5,6 +5,12 @@
 #include "calls.h"
 
 
+
+route_t rTable[1][HALL_SENSORS] = {
+    {{CW, false, 0}, {CW, false, 0}, {CW, false, 0}, {CW, false, 0}, {CW, false, 0}, {CW, false, 0}, {CW, false, 0}, {CW, false, 0}}
+};
+
+
 void track_server()
 {
     pmbox_t box = bind(TRACK_BOX);
