@@ -12,6 +12,7 @@
 #include "k_handlers.h"
 #include "frame_handler.h"
 #include "packet_handler.h"
+#include "track_manager.h"
 #include "calls.h"
 
 
@@ -28,9 +29,12 @@ int main(void)
     UART1_init();
 
     /* Place Process Create requests here */
-    process_attr_t attr = {.id = 0, .priority = 2, .name = "Packet Server", .arg = NULL};
+    process_attr_t attr = {.id = 0, .priority = 3, .name = "Packet Server", .arg = NULL};
     pcreate(&attr, &packet_server);
 
+    attr.priority = 2;
+    strcpy(attr.name, "Track Server");
+    pcreate(&attr, &track_server);
     /*                                    */
 
     kernel_start();

@@ -13,7 +13,6 @@
 #define TRAIN_NAME  "Train Manager"
 
 typedef enum TRAIN_DIRECTIONS {CW, CCW} direction_t;
-
 typedef enum SWITCH_POSITIONS {DIVERTED, STRAIGHT} switch_pos_t;
 
 typedef enum SENSOR_CODES {

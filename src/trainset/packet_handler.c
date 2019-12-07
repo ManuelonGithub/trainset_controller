@@ -24,21 +24,21 @@ void packet_server()
     // received packet alias cast
     packet_t*   rx_pkt = (packet_t*)&rx_data;
 
-    packet_t dummy;
-    dummy.ctrl.Nr = 0;
-    dummy.ctrl.Ns = 0;
-    dummy.ctrl.type = DATA;
-
-    dummy.data[0] = TRAIN_MOVE;
-    dummy.data[1] = 0xFF;
-    dummy.data[2] = 0x81;
-
-    dummy.length = 3;
-
-    sendPacket(&dummy, &tracker);
+//    packet_t dummy;
+//    dummy.ctrl.Nr = 0;
+//    dummy.ctrl.Ns = 0;
+//    dummy.ctrl.type = DATA;
+//
+//    dummy.data[0] = TRAIN_MOVE;
+//    dummy.data[1] = 0xFF;
+//    dummy.data[2] = 0x81;
+//
+//    dummy.length = 3;
+//
+//    sendPacket(&dummy, &tracker);
 
     while(1) {
-        rx_size = recv(box, ANY_BOX, (uint8_t*)&rx_pkt, sizeof(packet_t), &src_box);
+        rx_size = recv(box, ANY_BOX, rx_data, PACKET_DATA_MAX, &src_box);
 
         // Process Received message
         if (src_box == PACKET_BOX) {
@@ -76,7 +76,7 @@ void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
                 PKT_MOV(tracker->Nr);
                 send(TRACK_BOX, PACKET_BOX, pkt->data, pkt->length);
 
-                flushPacketTable(pkt->ctrl.Nr-1);
+                flushPacketTable(pkt->ctrl.Nr);
 
                 tracker->pend_ack = true;
             }
@@ -86,7 +86,7 @@ void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
         } break;
 
         case ACK: {
-            flushPacketTable(pkt->ctrl.Nr-1);
+            flushPacketTable(pkt->ctrl.Nr);
         } break;
 
         case NACK: {
@@ -99,17 +99,8 @@ void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
 
 inline void flushPacketTable(uint8_t LastReceived)
 {
-    packet_t*   pkt;
-    pmbox_t     src;
-
     // Going under the assumption last received is always lagging table's free pointer.
-    while (pkTable.valid <= LastReceived) {
-        pkt = &pkTable.packet[pkTable.valid];
-        src = pkTable.packetSrc[pkTable.valid];
-
-        // Send confirmation message
-        send(src, PACKET_BOX, pkt->data, pkt->length);
-
+    while (pkTable.valid < LastReceived) {
         // Move last valid position
         PKT_MOV(pkTable.valid);
     }
@@ -165,8 +156,6 @@ bool processControlMessage(uint8_t* data, size_t size, pmbox_t src_box)
         retval = true;
 
         pkt = &pkTable.packet[pkTable.free];
-
-        pkTable.packetSrc[pkTable.free] = src_box;
 
         memcpy(pkt->data, data, size);
         pkt->length = size;

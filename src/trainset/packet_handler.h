@@ -12,6 +12,7 @@
 #define PACKET_DATA_MAX     256
 
 #define PACKET_META_SIZE    2
+#define PACKET_MAX_SIZE     PACKET_META_SIZE+PACKET_DATA_MAX
 
 typedef enum PACKET_TYPES_ {DATA, ACK, NACK} packet_type_t;
 
@@ -27,15 +28,8 @@ typedef struct packet_ {
     uint8_t         data[PACKET_DATA_MAX];
 } packet_t;
 
-typedef struct packet_entry_ {
-    bool        valid;
-    pmbox_t     src_box;
-    packet_t    packet;
-} packet_entry_t;
-
 typedef struct packet_table_ {
     packet_t    packet[PACKET_MAX];
-    pmbox_t     packetSrc[PACKET_MAX];
     uint8_t     valid;
     uint8_t     free;
     bool        full;
