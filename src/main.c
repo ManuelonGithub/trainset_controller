@@ -35,10 +35,6 @@ int main(void)
     strcpy(attr.name, "Track Server");
     pcreate(&attr, &track_server);
 
-//    attr.priority = LOWEST_PRIORITY;
-//    strcpy(attr.name, "Sensor Sim");
-//    pcreate(&attr, &hall_sensor_test);
-
     /*                                    */
 
     kernel_start();

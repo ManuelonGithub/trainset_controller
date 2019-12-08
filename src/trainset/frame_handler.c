@@ -36,7 +36,7 @@ int8_t recvChecksum;
 int badFrame;
 char data;
 
-static uart_descriptor_t uart1;
+uart_descriptor_t uart1;
 
 /**
  * @brief   Initializes the control registers for UART0 and the UART descriptor
@@ -114,16 +114,6 @@ void UART1_IntEnable(unsigned long flags)
  */
 void UART1_IntHandler(void)
 {
-    //Uncomment to test that the UART1 is initialized correctly
-//    if (UART1_MIS_R & UART_INT_RX) {
-//        /* RECV done - clear interrupt and make char available to application */
-//        UART1_ICR_R |= UART_INT_RX;
-//
-//        enqueuec(&UART1->rx, UART1_DR_R);
-//
-//        ioServerSend();
-//    }
-
     if (UART1_MIS_R & UART_INT_RX) {
         /* RECV done - clear interrupt and make char available to application */
         char c = UART1_DR_R;
@@ -139,11 +129,16 @@ void UART1_IntHandler(void)
 
 }
 
+uint8_t times_called;
+uint8_t dles;
+
 //TODO: i assume inline helps here for interrupt functions but idk
 inline void formPacket(char c){
 
+    times_called++;
+
     //STX always forces first state.
-    if (c == STX)
+    if (recvState == VALIDATE && c == STX)
         recvState = START;
 
     switch (recvState){
@@ -169,9 +164,9 @@ inline void formPacket(char c){
     case VALIDATE:
 
         //If a DLE is received
-        if (c == DLE)
+        if (c == DLE) {
             recvState = ESCByte;
-
+        }
         //End of Transmission
         else if (c == ETX){
             //Check xmitChecksum
@@ -206,8 +201,6 @@ inline void formPacket(char c){
         break;
 
     default:
-        //for (;;)
-     //   System.out.println("Youre in Java now >:)");
         break;
     }
 }
@@ -268,7 +261,6 @@ inline void transmitFrame(){
 
     case sendETX:
         sendState = Wait;
-//        UART0_puts("[Frame Control] End Frame Transmission.\n");
         UART1_DR_R = ETX;
 
         break;
@@ -320,8 +312,6 @@ bool startTransmission(char *packet, int length)
         uart1.tx.rd_ptr = 0;
         uart1.tx.wr_ptr = length-1;
 
-//        UART0_puts("[Frame Control] Start Frame Transmission.\n");
-
         UART1_DR_R = STX;
 
         return true;
@@ -332,79 +322,11 @@ bool startTransmission(char *packet, int length)
     }
 }
 
-//uint8_t Ns, Nr;
-//
-//bool startTransmission(char *packet, int length)
-//{
-//    packet_t* ctrl_pkt = (packet_t*)packet;
-//
-//    trainset_msg_t train_msg;
-//
-//    packet_t atmel_pkt;
-//    atmel_pkt.ctrl.type = DATA;
-//
-//    pmsg_t msg = {
-//        .dst = PACKET_BOX,
-//        .src = PACKET_BOX,
-//        .data = (uint8_t*)&atmel_pkt,
-//        .size = 0
-//    };
-//
-//    if (ctrl_pkt->ctrl.type == DATA) {
-//        switch (ctrl_pkt->data[0]) {
-//            case TRAIN_MOVE: {
-//                train_msg.code = TRAIN_ACK;
-//                train_msg.arg1 = 0xFF;
-//                train_msg.arg2 = 0;
-//                atmel_pkt.length = 3;
-//                memcpy(atmel_pkt.data, &train_msg, 3);
-//
-//                Nr++;
-//
-//                msg.size = 5;
-//            } break;
-//
-//            case SENSOR_RESET: {
-//                atmel_pkt.ctrl.type = ACK;
-//                atmel_pkt.length = 0;
-//
-//                Nr++;
-//
-//                msg.size = 2;
-//            } break;
-//
-//            case SENSOR_TRIGGERED: {
-//                train_msg.code = SENSOR_TRIGGERED;
-//                train_msg.arg1 = ctrl_pkt->data[1];
-//                train_msg.arg2 = 0;
-//                atmel_pkt.length = 3;
-//                memcpy(atmel_pkt.data, &train_msg, 3);
-//
-//                Ns++;
-//
-//                msg.size = 5;
-//            } break;
-//
-//            default: {
-//
-//            } break;
-//        }
-//
-//        atmel_pkt.ctrl.Nr = Nr;
-//        atmel_pkt.ctrl.Ns = Ns;
-//
-//        k_MsgSend(&msg, NULL);
-//    }
-//
-//    return true;
-//}
-
 /**
  * @brief   Send a character from the RX buffer to the kernel IO server.
  */
 void sendPacketServer()
 {
-//    UART0_puts("[Frame control] Frame received successfully.\n");
     pmsg_t msg = {
          .dst = PACKET_BOX,
          .src = PACKET_BOX,

@@ -10,7 +10,7 @@
 #include "cstr_utils.h"
 #include "uart.h"
 
-static packet_table_t   pkTable;    // Too big to be an automatic
+packet_table_t   pkTable;    // Too big to be an automatic
 
 void packet_server()
 {

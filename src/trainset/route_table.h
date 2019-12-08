@@ -41,7 +41,7 @@ typedef struct route_prog_ {
     direction_t dir;
     speed_t     speed;
     switch_t    sw;
-    sw_pos_t    res;
+    uint8_t     res;
 } route_prog_t;
 
 typedef union route_ {
