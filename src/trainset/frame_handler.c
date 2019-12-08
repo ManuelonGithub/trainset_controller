@@ -129,14 +129,9 @@ void UART1_IntHandler(void)
 
 }
 
-uint8_t times_called;
-uint8_t dles;
-
 //TODO: i assume inline helps here for interrupt functions but idk
-inline void formPacket(char c){
-
-    times_called++;
-
+inline void formPacket(char c)
+{
     //STX always forces first state.
     if (recvState == VALIDATE && c == STX)
         recvState = START;
@@ -225,7 +220,7 @@ inline void transmitFrame(){
         //regular transmit
     case xmitPacket:
         //If this byte is a problem byte
-        if (data == DLE || data == STX  || data == ETX ){
+        if (data == DLE || data == STX || data == ETX){
             sendState = ESC;
             UART1_DR_R = DLE;
         }

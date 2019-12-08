@@ -42,14 +42,14 @@ void track_server()
 
     tx_msg->code = TRAIN_MOVE;
     tx_msg->arg1 = 0xFF;
-    tx_msg->arg2 = train_status.ctrl;
+    tx_msg->arg2 = *(targ_t*)(&train_status);
 
     char num_buf[INT_BUF];
 
     bool done = false;
 
-//    // UART0_puts("[Track Server] Sending Train move message.\n");
-//    send(PACKET_BOX, TRACK_BOX, tx_data, sizeof(trainset_msg_t));
+    // UART0_puts("[Track Server] Sending Train move message.\n");
+    send(PACKET_BOX, TRACK_BOX, tx_data, sizeof(trainset_msg_t));
 
     while(1) {
         recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
@@ -61,11 +61,11 @@ void track_server()
             // UART0_puts(itoa(rx_msg->arg1, num_buf));
             // UART0_puts("\n\n");
 
-            if (rx_msg->arg1 == 1) {
+            if (rx_msg->arg1 == 18) {
                 train_status.mag = 15;
                 tx_msg->code = TRAIN_MOVE;
                 tx_msg->arg1 = 0xFF;
-                tx_msg->arg2 = train_status.ctrl;
+                tx_msg->arg2 = 0;
 
                 // UART0_puts("[Track Server] Stopping Train.\n\n");
                 send(PACKET_BOX, TRACK_BOX, tx_data, sizeof(trainset_msg_t));

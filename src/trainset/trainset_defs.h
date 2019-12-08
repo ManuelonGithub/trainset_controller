@@ -54,13 +54,10 @@ typedef struct trainset_msg_ {
     targ_t arg2;
 } trainset_msg_t;
 
-typedef union train_ctrl_ {
-    struct {
+typedef struct train_ctrl_ {
         speed_t     mag : 4;
         uint8_t     res : 3;
         direction_t dir : 1;
-    };
-    uint8_t ctrl;
 } train_ctrl_t;
 
 #define PACKET_MAX          8
