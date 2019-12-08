@@ -12,6 +12,7 @@
 #include "UART.h"
 #include "k_types.h"
 #include "k_messaging.h"
+#include "trainset_defs.h"
 
 #define PACKET_BOX 14
 void ioServerSend();
@@ -267,6 +268,7 @@ inline void transmitFrame(){
 
     case sendETX:
         sendState = Wait;
+//        UART0_puts("[Frame Control] End Frame Transmission.\n");
         UART1_DR_R = ETX;
 
         break;
@@ -310,13 +312,15 @@ inline bool UART1_TxReady(void)
     return !(UART1_FR_R & UART_FR_BUSY);
 }
 
-bool startTransmission(char *packet, int length){
-
+bool startTransmission(char *packet, int length)
+{
     if (sendState == startTransmit){
 
         memcpy(uart1.tx.data, packet, length);
         uart1.tx.rd_ptr = 0;
         uart1.tx.wr_ptr = length-1;
+
+//        UART0_puts("[Frame Control] Start Frame Transmission.\n");
 
         UART1_DR_R = STX;
 
@@ -326,13 +330,81 @@ bool startTransmission(char *packet, int length){
     else {
         return false;
     }
-
 }
+
+//uint8_t Ns, Nr;
+//
+//bool startTransmission(char *packet, int length)
+//{
+//    packet_t* ctrl_pkt = (packet_t*)packet;
+//
+//    trainset_msg_t train_msg;
+//
+//    packet_t atmel_pkt;
+//    atmel_pkt.ctrl.type = DATA;
+//
+//    pmsg_t msg = {
+//        .dst = PACKET_BOX,
+//        .src = PACKET_BOX,
+//        .data = (uint8_t*)&atmel_pkt,
+//        .size = 0
+//    };
+//
+//    if (ctrl_pkt->ctrl.type == DATA) {
+//        switch (ctrl_pkt->data[0]) {
+//            case TRAIN_MOVE: {
+//                train_msg.code = TRAIN_ACK;
+//                train_msg.arg1 = 0xFF;
+//                train_msg.arg2 = 0;
+//                atmel_pkt.length = 3;
+//                memcpy(atmel_pkt.data, &train_msg, 3);
+//
+//                Nr++;
+//
+//                msg.size = 5;
+//            } break;
+//
+//            case SENSOR_RESET: {
+//                atmel_pkt.ctrl.type = ACK;
+//                atmel_pkt.length = 0;
+//
+//                Nr++;
+//
+//                msg.size = 2;
+//            } break;
+//
+//            case SENSOR_TRIGGERED: {
+//                train_msg.code = SENSOR_TRIGGERED;
+//                train_msg.arg1 = ctrl_pkt->data[1];
+//                train_msg.arg2 = 0;
+//                atmel_pkt.length = 3;
+//                memcpy(atmel_pkt.data, &train_msg, 3);
+//
+//                Ns++;
+//
+//                msg.size = 5;
+//            } break;
+//
+//            default: {
+//
+//            } break;
+//        }
+//
+//        atmel_pkt.ctrl.Nr = Nr;
+//        atmel_pkt.ctrl.Ns = Ns;
+//
+//        k_MsgSend(&msg, NULL);
+//    }
+//
+//    return true;
+//}
+
 /**
  * @brief   Send a character from the RX buffer to the kernel IO server.
  */
 void sendPacketServer()
 {
+//    UART0_puts("[Frame control] Frame received successfully.\n");
     pmsg_t msg = {
          .dst = PACKET_BOX,
          .src = PACKET_BOX,

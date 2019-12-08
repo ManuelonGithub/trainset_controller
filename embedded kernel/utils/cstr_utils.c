@@ -40,3 +40,32 @@ char *itoa(int i, char *str_buf)
 	return p;
 }
 
+char *itoa_hex(int i, char *str_buf)
+{
+    char* p = &str_buf[INT_BUF-1];  /* points to end of buffer '\0' */
+
+    *p = '\0';
+
+    int rem;
+
+    if (i >= 0) {
+        do {
+            rem = (i % 16);
+            if (rem < 10)   *--p = '0' + rem;
+            else            *--p = 'A' + (rem-10);
+            i /= 16;
+        } while (i != 0);
+    }
+    else {          /* i < 0 */
+        do {
+            rem = (i % 16);
+            if (rem < 10)   *--p = '0' + rem;
+            else            *--p = 'A' + (rem-10);
+            i /= 16;
+        } while (i != 0);
+        *--p = '-';
+    }
+
+    return p;
+}
+

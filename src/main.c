@@ -15,7 +15,6 @@
 #include "track_manager.h"
 #include "calls.h"
 
-
 /**
  * @brief   main.c
  * @details Initializes the kernel and all processes to run in the system.
@@ -29,12 +28,17 @@ int main(void)
     UART1_init();
 
     /* Place Process Create requests here */
-    process_attr_t attr = {.id = 0, .priority = 3, .name = "Packet Server", .arg = NULL};
+    process_attr_t attr = {.id = 0, .priority = HIGH_PRIORITY, .name = "Packet Server", .arg = NULL};
     pcreate(&attr, &packet_server);
 
-    attr.priority = 2;
+    attr.priority = USER_PRIORITY;
     strcpy(attr.name, "Track Server");
     pcreate(&attr, &track_server);
+
+//    attr.priority = LOWEST_PRIORITY;
+//    strcpy(attr.name, "Sensor Sim");
+//    pcreate(&attr, &hall_sensor_test);
+
     /*                                    */
 
     kernel_start();

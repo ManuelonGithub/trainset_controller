@@ -8,6 +8,8 @@
 #include "trainset_defs.h"
 #include "route_table.h"
 
+void hall_sensor_test();
+
 void track_server();
 void track_init();
 

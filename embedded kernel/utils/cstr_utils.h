@@ -7,6 +7,7 @@
 #define INT_BUF		INT_DIGITS+2
 
 char *itoa(int i, char *str_buf);
+char *itoa_hex(int i, char *str_buf);
 
 #endif	//CSTR_UTILS_H
 
