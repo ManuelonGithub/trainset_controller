@@ -14,8 +14,8 @@
 
 // Route Codes: Little endian aligned!
 #define DONE        0x00000000  // CW, speed = 0, sw = 0, pos = straight
-#define CW_ROUTE    (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CW))  // CW, speed = 10, sw = 0, pos = straight
-#define CCW_ROUTE   (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CCW)) // CCW, speed = 10, sw = 0, pos = straight
+#define ROUTE_CW    (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CW))  // CW, speed = 10, sw = 0, pos = straight
+#define ROUTE_CCW   (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CCW)) // CCW, speed = 10, sw = 0, pos = straight
 
 // Special cases for Route Codes
 #define ROUTE_1_17      ((DIVERTED << 24) | (6 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 6, pos = diverted
