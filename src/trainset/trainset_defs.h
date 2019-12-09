@@ -22,7 +22,7 @@ typedef uint8_t targ_t;
 #define DEF_SPEED   10
 
 enum TRAIN_DIRECTIONS {CW, CCW};
-enum SWITCH_POSITIONS {DIVERTED, STRAIGHT};
+enum SWITCH_POSITIONS {STRAIGHT, DIVERTED};
 
 typedef uint8_t code_t;
 typedef code_t sensor_code_t;
@@ -64,14 +64,17 @@ typedef union train_ctrl_ {
     targ_t arg;
 } train_ctrl_t;
 
-typedef enum TRAIN_STATES {INIT, MOVING, PASSED_TAIL, DONE} train_state_t;
+typedef enum TRAIN_STATES {INIT, MOVING, PASSED_TAIL, DESTINATION} train_state_t;
 
 typedef struct train_ {
     train_ctrl_t    ctrl;
+    speed_t         max;
     uint8_t         dst_tail;
     uint8_t         dst_head;
     uint8_t         current;
     train_state_t   state;
+    uint8_t         sw_active;
+    uint8_t         sw_queue;
 } train_t;
 
 #define PACKET_MAX          8

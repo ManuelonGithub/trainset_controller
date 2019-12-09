@@ -129,6 +129,8 @@ void UART1_IntHandler(void)
 
 }
 
+circular_buffer_t rx_test;
+
 //TODO: i assume inline helps here for interrupt functions but idk
 inline void formPacket(char c)
 {
@@ -148,6 +150,9 @@ inline void formPacket(char c)
                 badFrame = 1;
             }
 
+            circular_buffer_init(&rx_test);
+            enqueuec(&rx_test, c);
+
             recvLength = 0;
             recvChecksum = 0;
             recvState = VALIDATE;
@@ -157,6 +162,7 @@ inline void formPacket(char c)
 
     //Regular receive in the middle of a frame
     case VALIDATE:
+        enqueuec(&rx_test, c);
 
         //If a DLE is received
         if (c == DLE) {
@@ -200,7 +206,7 @@ inline void formPacket(char c)
     }
 }
 
-circular_buffer_t test;
+circular_buffer_t tx_test;
 
 inline void transmitFrame(){
 
@@ -223,7 +229,7 @@ inline void transmitFrame(){
         if (data == DLE || data == STX || data == ETX){
             sendState = ESC;
 
-            enqueuec(&test, DLE);
+            enqueuec(&tx_test, DLE);
 
             UART1_DR_R = DLE;
         }
@@ -233,14 +239,14 @@ inline void transmitFrame(){
             if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX){
                 sendState = sendChecksum;
 
-                enqueuec(&test, DLE);
+                enqueuec(&tx_test, DLE);
 
                 UART1_DR_R = DLE;
             }
             else{
                 sendState = sendETX;
 
-                enqueuec(&test, xmitChecksum);
+                enqueuec(&tx_test, xmitChecksum);
 
                 UART1_DR_R = xmitChecksum;
             }
@@ -248,7 +254,7 @@ inline void transmitFrame(){
         else {
             xmitChecksum += data;
 
-            enqueuec(&test, data);
+            enqueuec(&tx_test, data);
 
             UART1_DR_R = dequeuec(&uart1.tx);
         }
@@ -258,7 +264,7 @@ inline void transmitFrame(){
         sendState = xmitPacket;
         xmitChecksum += data;
 
-        enqueuec(&test, data);
+        enqueuec(&tx_test, data);
 
         UART1_DR_R = dequeuec(&uart1.tx);
         break;
@@ -266,7 +272,7 @@ inline void transmitFrame(){
     case sendChecksum:
         sendState = sendETX;
 
-        enqueuec(&test, xmitChecksum);
+        enqueuec(&tx_test, xmitChecksum);
 
         UART1_DR_R = xmitChecksum;
 
@@ -275,7 +281,7 @@ inline void transmitFrame(){
     case sendETX:
         sendState = Wait;
 
-        enqueuec(&test, ETX);
+        enqueuec(&tx_test, ETX);
 
         UART1_DR_R = ETX;
 
@@ -328,9 +334,9 @@ bool startTransmission(char *packet, int length)
         uart1.tx.rd_ptr = 0;
         uart1.tx.wr_ptr = length;
 
-        circular_buffer_init(&test);
+        circular_buffer_init(&tx_test);
 
-        enqueuec(&test, STX);
+        enqueuec(&tx_test, STX);
 
         UART1_DR_R = STX;
 

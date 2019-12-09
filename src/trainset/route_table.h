@@ -38,7 +38,7 @@ typedef union route_ {
     uint32_t        code;
 } route_t;
 
-route_t* table_access(uint8_t row, uint8_t column);
+route_t* accessRoute(uint8_t row, uint8_t column);
 
 #endif // ROUTE_TABLE_H
 
