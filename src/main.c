@@ -13,6 +13,7 @@
 #include "frame_handler.h"
 #include "packet_handler.h"
 #include "track_manager.h"
+#include "trainset_VM.h"
 #include "calls.h"
 
 /**
@@ -29,12 +30,15 @@ int main(void)
 
     /* Place Process Create requests here */
     process_attr_t attr = {.id = 0, .priority = HIGH_PRIORITY, .name = "Packet Server", .arg = NULL};
-    pcreate(&attr, &packet_server);
+//    pcreate(&attr, &packet_server);
+//
+//    attr.priority = USER_PRIORITY;
+//    strcpy(attr.name, "Track Server");
+//    pcreate(&attr, &trainset_controller);
 
-    attr.priority = USER_PRIORITY;
-    strcpy(attr.name, "Track Server");
-    pcreate(&attr, &trainset_controller);
-
+    attr.priority = HIGH_PRIORITY;
+    strcpy(attr.name, "IO proccess");
+    pcreate(&attr, &userIO);
     /*                                    */
 
     kernel_start();

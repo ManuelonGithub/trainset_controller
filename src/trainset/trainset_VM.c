@@ -9,46 +9,81 @@
 void printSpot(int,int);
 #define USER_BOX 12
 #define ESC 27
+
 void userIO(void) {
 
+    bind(USER_BOX);
 
-    uint8_t currentPosition;
+    uint8_t currentPosition=0;
     uint8_t spot1, spot2;
+    train_t startTrain;
+
     int valid = 0;
+
     char buff[MSG_MAX_SIZE];
     drawTrack();
 
+
     while(1){
 
-        drawTrack();
 
-        printSpot(50,0);
-        send_user(USER_BOX, "What point is the train closest to? \n\r");
+
         //Get input from the user
-        recv_user(USER_BOX, buff, MSG_MAX_SIZE);
-
-        currentPosition = atoi(buff);
-
-        send_user(USER_BOX, "Which two points should the train end up between? eg 4 5 \n\r");
+        while (1){
+        printSpot(50,0);
+        send_user(USER_BOX, "What point is the train closest to? eg 1 \n\r");
 
         recv_user(USER_BOX, buff, MSG_MAX_SIZE);
 
-        valid = sscanf(buff, "%d %d", &spot1, &spot2);
+        valid = sscanf(buff, "%d", &spot1);
 
-        if (valid != 2){
-            send_user(USER_BOX, "give me correct format");
+        if (valid !=1 || 1 > spot1 > 24){
+            send_user(USER_BOX, "give me correct format \n \r");
         }
-        else {
+        else{
+            startTrain.current = spot1;
+            spot1 = 0;
+            valid = 0;
+            break;
+        }
+        }
+
+        while (1){
+            printSpot(50,0);
+            send_user(USER_BOX, "Which two points should the train end up between? eg 4 5 \n\r");
+            recv_user(USER_BOX, buff, MSG_MAX_SIZE);
+
+            valid = sscanf(buff, "%d %d", &spot1, &spot2);
+
+            if (valid != 2 || 1 > spot1 > 24 || 1 > spot2 > 24){
+                send_user(USER_BOX, "give me correct format");
+            }
+            else {
+                startTrain.dst_head = spot1;
+                startTrain.dst_tail = spot2;
+                spot1 = 0;
+                spot2 = 0;
+                valid = 0;
+                break;
+            }
+
 
         }
 
+        send(TRACK_BOX, USER_BOX, &startTrain, sizeof(train_t));
 
+        //for updating the track gui
+//        while(1){
+//            recv(USER_BOX, TRACK_BOX, &currentPosition, MSG_MAX_SIZE, 1);
+//
+//        }
 
         int i = 0;
 
 
     }
 }
+
 
 void drawTrack(void){
 
@@ -84,7 +119,6 @@ void drawTrack(void){
     send_user(USER_BOX,    "\\                  /");
     printSpot(17,31);
     send_user(USER_BOX,      "--o------------o--");
-
 
 }
 
