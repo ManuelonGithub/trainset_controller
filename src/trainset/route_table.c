@@ -34,12 +34,12 @@ static const route_t table[HALL_SENSORS][HALL_SENSORS] =
 /* row 23 */ {{.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = ROUTE_CW    }, {.code = DONE        }}
 };
 
-//route_t* table_access(uint8_t row, uint8_t col)
-//{
-//    if (row < 2 && col < 4) {
-//        return &table[row][col];
-//    }
-//    else {
-//        return NULL;
-//    }
-//}
+route_t* table_access(uint8_t row, uint8_t col)
+{
+    if (row < HALL_SENSORS && col < HALL_SENSORS) {
+        return &table[row][col];
+    }
+    else {
+        return NULL;
+    }
+}

@@ -66,13 +66,13 @@ typedef union train_ctrl_ {
 
 typedef enum TRAIN_STATES {INIT, MOVING, PASSED_TAIL, DONE} train_state_t;
 
-typedef struct train_state_ {
+typedef struct train_ {
     train_ctrl_t    ctrl;
     uint8_t         dst_tail;
     uint8_t         dst_head;
     uint8_t         current;
     train_state_t   state;
-} train_state_t;
+} train_t;
 
 #define PACKET_MAX          8
 #define PACKET_DATA_MAX     256

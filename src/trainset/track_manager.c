@@ -5,7 +5,7 @@
 #include "calls.h"
 #include "cstr_utils.h"
 #include "uart.h"
-
+#include "route_table.h"
 
 
 void trainset_controller()
@@ -17,7 +17,14 @@ void trainset_controller()
     train_msg_t* tx_msg = (train_msg_t*)tx_data;
     train_msg_t* rx_msg = (train_msg_t*)rx_data;
 
-    train_state_t state;
+    train_t train;
 
-    recv(12, TRACK_BOX, &state, sizeof(train_state_t), NULL);
+    recv(12, TRACK_BOX, &train, sizeof(train_t), NULL);
+
+    train.state = INIT;
+}
+
+void analyseRoute(route_t* route, train_t* train)
+{
+
 }
