@@ -49,11 +49,11 @@ enum SWITCH_CODES {
 #define ACK_SUCCESS 0
 #define ACK_FAILURE 1
 
-typedef struct trainset_msg_ {
+typedef struct train_msg_ {
     code_t code;
     targ_t arg1;
     targ_t arg2;
-} trainset_msg_t;
+} train_msg_t;
 
 typedef union train_ctrl_ {
     struct {
@@ -64,11 +64,14 @@ typedef union train_ctrl_ {
     targ_t arg;
 } train_ctrl_t;
 
+typedef enum TRAIN_STATES {INIT, MOVING, PASSED_TAIL, DONE} train_state_t;
+
 typedef struct train_state_ {
     train_ctrl_t    ctrl;
-    uint8_t         dst_back;
-    uint8_t         dst_front;
+    uint8_t         dst_tail;
+    uint8_t         dst_head;
     uint8_t         current;
+    train_state_t   state;
 } train_state_t;
 
 #define PACKET_MAX          8

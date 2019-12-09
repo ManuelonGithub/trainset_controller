@@ -14,8 +14,8 @@ void trainset_controller()
 
     uint8_t rx_data[PACKET_DATA_MAX], tx_data[PACKET_DATA_MAX];
 
-    trainset_msg_t* tx_msg = (trainset_msg_t*)tx_data;
-    trainset_msg_t* rx_msg = (trainset_msg_t*)rx_data;
+    train_msg_t* tx_msg = (train_msg_t*)tx_data;
+    train_msg_t* rx_msg = (train_msg_t*)rx_data;
 
     train_state_t state;
 
