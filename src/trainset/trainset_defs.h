@@ -4,6 +4,7 @@
 #define TRAINSET_DEFINITIONS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define PACKET_BOX          14
 #define TRACK_BOX           13
@@ -54,11 +55,21 @@ typedef struct trainset_msg_ {
     targ_t arg2;
 } trainset_msg_t;
 
-typedef struct train_ctrl_ {
+typedef union train_ctrl_ {
+    struct {
         speed_t     mag : 4;
         uint8_t     res : 3;
         direction_t dir : 1;
+    };
+    targ_t arg;
 } train_ctrl_t;
+
+typedef struct train_state_ {
+    train_ctrl_t    ctrl;
+    uint8_t         dst_back;
+    uint8_t         dst_front;
+    uint8_t         current;
+} train_state_t;
 
 #define PACKET_MAX          8
 #define PACKET_DATA_MAX     256

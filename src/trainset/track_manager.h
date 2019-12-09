@@ -10,7 +10,7 @@
 
 void hall_sensor_test();
 
-void track_server();
+void trainset_controller();
 void track_init();
 
 

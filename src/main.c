@@ -33,7 +33,7 @@ int main(void)
 
     attr.priority = USER_PRIORITY;
     strcpy(attr.name, "Track Server");
-    pcreate(&attr, &track_server);
+    pcreate(&attr, &trainset_controller);
 
     /*                                    */
 

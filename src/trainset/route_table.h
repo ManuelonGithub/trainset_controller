@@ -14,27 +14,16 @@
 
 // Route Codes: Little endian aligned!
 #define DONE        0x00000000  // CW, speed = 0, sw = 0, pos = straight
-#define ROUTE_CW    (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CW))  // CW, speed = 10, sw = 0, pos = straight
-#define ROUTE_CCW   (STRAIGHT << 24 | (NO_SWITCH << 16) | (DEF_SPEED << 8) | (CCW)) // CCW, speed = 10, sw = 0, pos = straight
+#define ROUTE_CW    ((0 << 24) | (0 << 16) | (1 << 8) | (CW))  // CW, speed = 10, sw = 0, pos = straight
+#define ROUTE_CCW   ((0 << 24) | (0 << 16) | (1 << 8) | (CCW)) // CCW, speed = 10, sw = 0, pos = straight
 
 // Special cases for Route Codes
-#define ROUTE_1_17      ((DIVERTED << 24) | (6 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 6, pos = diverted
-#define ROUTE_1_CCW     ((STRAIGHT << 24) | (6 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 6, pos = straight
-
-#define ROUTE_3_21      ((DIVERTED << 24) | (5 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 5, pos = diverted
-#define ROUTE_3_CCW     ((STRAIGHT << 24) | (5 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 5, pos = diverted
-
-#define ROUTE_6_18      ((DIVERTED << 24) | (4 << 16) | (DEF_SPEED << 8) | (CW))    // CW, speed = 10, sw = 4, pos = diverted
-#define ROUTE_6_CW      ((STRAIGHT << 24) | (4 << 16) | (DEF_SPEED << 8) | (CW))    // CW, speed = 10, sw = 4, pos = diverted
-
-#define ROUTE_9_19      ((DIVERTED << 24) | (3 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 3, pos = diverted
-#define ROUTE_9_CCW     ((STRAIGHT << 24) | (3 << 16) | (DEF_SPEED << 8) | (CCW))   // CCW, speed = 10, sw = 3, pos = diverted
-
-#define ROUTE_11_23     ((DIVERTED << 24) | (2 << 16) | (DEF_SPEED << 8) | (CCW))   // CW, speed = 10, sw = 4, pos = diverted
-#define ROUTE_11_CCW    ((STRAIGHT << 24) | (2 << 16) | (DEF_SPEED << 8) | (CCW))   // CW, speed = 10, sw = 4, pos = diverted
-
-#define ROUTE_14_20     ((DIVERTED << 24) | (1 << 16) | (DEF_SPEED << 8) | (CW))    // CW, speed = 10, sw = 4, pos = diverted
-#define ROUTE_14_CW     ((STRAIGHT << 24) | (1 << 16) | (DEF_SPEED << 8) | (CW))    // CW, speed = 10, sw = 4, pos = diverted
+#define ROUTE_CCW_S6    (DIVERTED << 24 | (6 << 16) | (1 << 8) | (CCW))
+#define ROUTE_CCW_S5    (DIVERTED << 24 | (5 << 16) | (1 << 8) | (CCW))
+#define ROUTE_CW_S4     (DIVERTED << 24 | (4 << 16) | (1 << 8) | (CW))
+#define ROUTE_CCW_S3    (DIVERTED << 24 | (3 << 16) | (1 << 8) | (CCW))
+#define ROUTE_CW_S2     (DIVERTED << 24 | (2 << 16) | (1 << 8) | (CW))
+#define ROUTE_CW_S1     (DIVERTED << 24 | (1 << 16) | (1 << 8) | (CW))
 
 
 typedef struct route_prog_ {
