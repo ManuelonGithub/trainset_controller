@@ -200,6 +200,8 @@ inline void formPacket(char c)
     }
 }
 
+circular_buffer_t test;
+
 inline void transmitFrame(){
 
     data = peek(&uart1.tx);
@@ -213,8 +215,6 @@ inline void transmitFrame(){
     case startTransmit:
         xmitChecksum = 0;
         //STX already sent. thats why were in the UART1 handler.
-        xmitLength = buffer_size(&uart1.tx); //might not need the length
-           // if we use the bufferSize instead
         sendState = xmitPacket;
 
         //regular transmit
@@ -222,22 +222,34 @@ inline void transmitFrame(){
         //If this byte is a problem byte
         if (data == DLE || data == STX || data == ETX){
             sendState = ESC;
+
+            enqueuec(&test, DLE);
+
             UART1_DR_R = DLE;
         }
         //If the buffer has been fully transmitted prep checksum
-        else if (!buffer_size(&uart1.tx)){
+        else if (buffer_size(&uart1.tx) == BUFFER_EMPTY){
             xmitChecksum = ~xmitChecksum;
             if (xmitChecksum == DLE || xmitChecksum == STX || xmitChecksum == ETX){
                 sendState = sendChecksum;
+
+                enqueuec(&test, DLE);
+
                 UART1_DR_R = DLE;
             }
             else{
                 sendState = sendETX;
+
+                enqueuec(&test, xmitChecksum);
+
                 UART1_DR_R = xmitChecksum;
             }
         }
         else {
             xmitChecksum += data;
+
+            enqueuec(&test, data);
+
             UART1_DR_R = dequeuec(&uart1.tx);
         }
         break;
@@ -245,17 +257,26 @@ inline void transmitFrame(){
     case ESC:
         sendState = xmitPacket;
         xmitChecksum += data;
+
+        enqueuec(&test, data);
+
         UART1_DR_R = dequeuec(&uart1.tx);
         break;
 
     case sendChecksum:
         sendState = sendETX;
+
+        enqueuec(&test, xmitChecksum);
+
         UART1_DR_R = xmitChecksum;
 
         break;
 
     case sendETX:
         sendState = Wait;
+
+        enqueuec(&test, ETX);
+
         UART1_DR_R = ETX;
 
         break;
@@ -305,7 +326,11 @@ bool startTransmission(char *packet, int length)
 
         memcpy(uart1.tx.data, packet, length);
         uart1.tx.rd_ptr = 0;
-        uart1.tx.wr_ptr = length-1;
+        uart1.tx.wr_ptr = length;
+
+        circular_buffer_init(&test);
+
+        enqueuec(&test, STX);
 
         UART1_DR_R = STX;
 

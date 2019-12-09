@@ -38,11 +38,11 @@ void track_server()
 
     uint8_t hall_queue = 0;
 
-    train_ctrl_t train_status = {.dir = CCW, .mag = 0, .res = 0};
+    train_ctrl_t train_status = {.dir = CCW, .mag = 10, .res = 0};
 
     tx_msg->code = TRAIN_MOVE;
     tx_msg->arg1 = 0xFF;
-    tx_msg->arg2 = *(targ_t*)(&train_status);
+    tx_msg->arg2 = *(targ_t*)&train_status;
 
     char num_buf[INT_BUF];
 
@@ -61,15 +61,16 @@ void track_server()
             // UART0_puts(itoa(rx_msg->arg1, num_buf));
             // UART0_puts("\n\n");
 
-            if (rx_msg->arg1 == 18) {
-                train_status.mag = 15;
+            if (rx_msg->arg1 == 6) {
                 tx_msg->code = TRAIN_MOVE;
                 tx_msg->arg1 = 0xFF;
                 tx_msg->arg2 = 0;
 
+                done = true;
+
                 // UART0_puts("[Track Server] Stopping Train.\n\n");
                 send(PACKET_BOX, TRACK_BOX, tx_data, sizeof(trainset_msg_t));
-                done = true;
+
             }
         }
         else if (rx_msg->code == TRAIN_ACK) {
@@ -82,6 +83,15 @@ void track_server()
                 // UART0_puts("[Track Server] Resetting Sensors.\n\n");
                 send(PACKET_BOX, TRACK_BOX, tx_data, sizeof(trainset_msg_t));
             }
+            else if (rx_msg->arg2 == 0) {
+                UART0_puts("Train move successful. ");
+            }
+            else {
+                UART0_puts("Train move failed. ");
+            }
+            UART0_puts("Train #: ");
+            UART0_puts(itoa_hex(rx_msg->arg1, num_buf));
+            UART0_puts("\n\n");
         }
         else if (rx_msg->code == SENSOR_RST_ACK) {
             // UART0_puts("[Track Server] Sensor #");
