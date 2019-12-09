@@ -64,7 +64,7 @@ typedef union train_ctrl_ {
     targ_t arg;
 } train_ctrl_t;
 
-typedef enum TRAIN_STATES {INIT, MOVING, PASSED_TAIL, DESTINATION} train_state_t;
+typedef enum TRAIN_STATES {INIT, MOVING, DESTINATION} train_state_t;
 
 typedef struct train_ {
     train_ctrl_t    ctrl;

@@ -20,7 +20,7 @@ inline targ_t driveTrain(uint8_t train, targ_t ctrl_arg);
 inline void resetSensors();
 
 void run_train(train_t* train);
-targ_t routeAnalysis(train_t* train);
+void routeAnalysis(train_t* train);
 
 
 #endif // TRACK_SERVER_H

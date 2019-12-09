@@ -85,19 +85,27 @@ inline targ_t driveTrain(uint8_t train, targ_t ctrl_arg)
     return ctrl_arg;
 }
 
+/**
+ * @brief   resets all hall sensors triggered.
+ */
 inline void resetSensors()
 {
     train_msg_t msg = {.code = SENSOR_RESET, .arg1 = 0xFF, .arg2 = 0};
     send(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t));
 }
 
+/**
+ * @brief   Runs the train control sequence until the train reaches its set destination.
+ * @param   [in, out] train:
+ *              pointer to train structure that contains
+ *              all info and data required to run train.
+ */
 void run_train(train_t* train)
 {
-    train_msg_t msg;
     uint8_t rx_data[PACKET_DATA_MAX];
-
     train_msg_t* rx_msg = (train_msg_t*)rx_data;
 
+    // Set the train state to be moving
     train->state = MOVING;
 
     while (train->state != DESTINATION) {
@@ -105,25 +113,35 @@ void run_train(train_t* train)
         routeAnalysis(train);
 
 //        send(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t));
+
+        // Receive messages from the train track
         recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
 
 //        request(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t), rx_data, PACKET_DATA_MAX);
 
         if (rx_msg->code == SENSOR_TRIGGERED) {
+            // Train has moved past a hall sensor
+            // Update the train's current sensor location
             train->current = rx_msg->arg1;
 //            send(USER_BOX, TRACK_BOX, &train->current, 1);
         }
     }
 }
 
-targ_t routeAnalysis(train_t* train)
+/**
+ * @brief   Analysis the current route of a train
+ * @param   [in, out] train: Pointer to train structure whose route will be analyzed.
+ */
+void routeAnalysis(train_t* train)
 {
-    route_t* route = (train->state == PASSED_TAIL) ?
+    // Retrieve current route from table
+    route_t* route = (train->current == train->dst_tail) ?
             accessRoute(train->current-1, train->dst_head-1) :  // If passed the tail of the destination
             accessRoute(train->current-1, train->dst_tail-1);
 
     // Set up train speed and direction
     if (route->code == DONE) {
+        // Train's destination has been reached
         train->state = DESTINATION;
         train->ctrl.arg = BREAK;
         // reset sensors?
@@ -131,8 +149,6 @@ targ_t routeAnalysis(train_t* train)
     else {
         train->ctrl.dir = route->prog.dir;
         train->ctrl.mag = train->max;
-
-        if (train->current == train->dst_tail)  train->state = PASSED_TAIL;
     }
 
     // Set up switch configuration
