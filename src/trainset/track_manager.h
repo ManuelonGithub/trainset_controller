@@ -17,10 +17,10 @@ inline uint8_t divertSwitch(uint8_t sw);
 inline uint8_t resetSwitch(uint8_t sw);
 
 inline targ_t driveTrain(uint8_t train, targ_t ctrl_arg);
-inline void resetSensors();
+inline void resetSensors(uint8_t sensor);
 
 void run_train(train_t* train);
-void routeAnalysis(train_t* train);
+inline void routeAnalysis(train_t* train);
 
 
 #endif // TRACK_SERVER_H

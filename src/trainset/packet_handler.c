@@ -31,11 +31,11 @@ void packet_server()
 
         // Process Received message
         if (src_box == PACKET_BOX) {
-            UART0_puts("[Packet Server] Packet Received (From Atmel).\n");
+            // UART0_puts("[Packet Server] Packet Received (From Atmel).\n");
             processTrainsetPacket(rx_pkt, &tracker);
         }
         else {
-            UART0_puts("[Packet Server] Message Receieved (From Track Server).\n");
+            // UART0_puts("[Packet Server] Message Receieved (From Track Server).\n");
             processControlMessage(rx_data, rx_size, src_box);
         }
 
@@ -65,19 +65,19 @@ void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
 
     switch (pkt->ctrl.type) {
         case DATA: {
-            UART0_puts("[Packet Server] Data Packet recv | Ns: ");
-            UART0_puts(itoa(pkt->ctrl.Ns, num_buf));
-            UART0_puts(" | Nr: ");
-            UART0_puts(itoa(pkt->ctrl.Nr, num_buf));
-            UART0_puts(" | Data: ");
+             UART0_puts("[Packet Server] Data Packet recv | Ns: ");
+             UART0_puts(itoa(pkt->ctrl.Ns, num_buf));
+             UART0_puts(" | Nr: ");
+             UART0_puts(itoa(pkt->ctrl.Nr, num_buf));
+             UART0_puts(" | Data: ");
 
             int i;
             for (i = 0; i < pkt->length; i++) {
-                UART0_puts(itoa_hex(pkt->data[i], num_buf));
-                UART0_puts(" ");
+                 UART0_puts(itoa_hex(pkt->data[i], num_buf));
+                 UART0_puts(" ");
             }
 
-            UART0_puts(" \n");
+             UART0_puts(" \n");
 
             if (tracker->Nr == pkt->ctrl.Ns) {
                 PKT_MOV(tracker->Nr);
@@ -88,24 +88,24 @@ void processTrainsetPacket(packet_t* pkt, packet_tracker_t* tracker)
                 tracker->pend_ack = true;
             }
             else {
-                UART0_puts("\n[Packet Server] Protocol Failure on RX!\n\n");
+                 UART0_puts("\n[Packet Server] Protocol Failure on RX!\n\n");
                 sendNack(tracker);
             }
         } break;
 
         case ACK: {
-            UART0_puts("[Packet Server] ACK packet recv: | ");
-            UART0_puts("Nr: ");
-            UART0_puts(itoa(tracker->Nr, num_buf));
-            UART0_puts(" |\n");
-            flushPacketTable(pkt->ctrl.Nr);
+             UART0_puts("[Packet Server] ACK packet recv: | ");
+             UART0_puts("Nr: ");
+             UART0_puts(itoa(pkt->ctrl.Nr, num_buf));
+             UART0_puts(" |\n");
+             flushPacketTable(pkt->ctrl.Nr);
         } break;
 
         case NACK: {
-            UART0_puts("[Packet Server] NACK packet recv: | ");
-            UART0_puts("Nr: ");
-            UART0_puts(itoa(tracker->Nr, num_buf));
-            UART0_puts(" |\n");
+             UART0_puts("[Packet Server] NACK packet recv: | ");
+             UART0_puts("Nr: ");
+             UART0_puts(itoa(pkt->ctrl.Nr, num_buf));
+             UART0_puts(" |\n");
             tracker->Ns = pkt->ctrl.Nr;
         } break;
 
@@ -117,7 +117,7 @@ inline void flushPacketTable(uint8_t LastReceived)
 {
     if (pkTable.valid != LastReceived) {
         // Going under the assumption last received is always lagging table's free pointer.
-        while (pkTable.valid < LastReceived) {
+        while (pkTable.valid != LastReceived) {
             // Move last valid position
             PKT_MOV(pkTable.valid);
         }
@@ -138,26 +138,26 @@ inline bool sendPacket(packet_t* pkt, packet_tracker_t* tracker)
         // Data packet TX successful, no need to send any ACKs
         tracker->pend_ack = false;
 
-        UART0_puts("[Packet Server] Data Packet send: | Ns: ");
-        UART0_puts(itoa(tracker->Ns, num_buf));
-        UART0_puts(" | Nr: ");
-        UART0_puts(itoa(tracker->Nr, num_buf));
-        UART0_puts(" | Data: ");
+         UART0_puts("[Packet Server] Data Packet send: | Ns: ");
+         UART0_puts(itoa(tracker->Ns, num_buf));
+         UART0_puts(" | Nr: ");
+         UART0_puts(itoa(tracker->Nr, num_buf));
+         UART0_puts(" | Data: ");
 
         int i;
         for (i = 0; i < pkt->length; i++) {
-            UART0_puts(itoa_hex(pkt->data[i], num_buf));
-            UART0_puts(" ");
+             UART0_puts(itoa_hex(pkt->data[i], num_buf));
+             UART0_puts(" ");
         }
 
-        UART0_puts(" \n");
+         UART0_puts(" \n");
 
         PKT_MOV(tracker->Ns);
 
         return true;
     }
     else {
-        UART0_puts("[Packet Server] Data Packet send FAIL.\n");
+         UART0_puts("[Packet Server] Data Packet send FAIL.\n");
     }
 
     return false;
@@ -174,14 +174,14 @@ inline bool sendAck(packet_tracker_t* tracker)
     char num_buf[INT_BUF];
 
     if (startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length))) {
-        UART0_puts("[Packet Server] ACK packet send: | ");
-        UART0_puts("Nr: ");
-        UART0_puts(itoa(tracker->Nr, num_buf));
-        UART0_puts(" |\n");
+         UART0_puts("[Packet Server] ACK packet send: | ");
+         UART0_puts("Nr: ");
+         UART0_puts(itoa(tracker->Nr, num_buf));
+         UART0_puts(" |\n");
         return true;
     }
     else {
-        UART0_puts("[Packet Server] ACK packet send FAIL.\n");
+         UART0_puts("[Packet Server] ACK packet send FAIL.\n");
     }
 
     return false;
@@ -196,10 +196,10 @@ inline void sendNack(packet_tracker_t* tracker)
 
     char num_buf[INT_BUF];
 
-    UART0_puts("[Packet Server] NACK packet send: | ");
-    UART0_puts("Nr: ");
-    UART0_puts(itoa(tracker->Nr, num_buf));
-    UART0_puts(" |\n");
+     UART0_puts("[Packet Server] NACK packet send: | ");
+     UART0_puts("Nr: ");
+     UART0_puts(itoa(tracker->Nr, num_buf));
+     UART0_puts(" |\n");
 
     while (!startTransmission((char*)&pkt, (PACKET_META_SIZE+pkt.length))) {}
 }

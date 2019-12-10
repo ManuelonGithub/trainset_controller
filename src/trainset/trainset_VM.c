@@ -127,7 +127,7 @@ void printSpot(int row, int col){
 /* Output a single character to specified screen position */
 /* CUP (Cursor position) command plus character to display */
 /* Assumes row and col are valid (1 through 24 and 1 through 80, respectively) */
-struct CUPch uart_data;
+    struct CUPch uart_data;
     /* Since globals aren�t permitted, this must be done each call */
     uart_data . esc = ESC;
     uart_data . sqrbrkt = '[';

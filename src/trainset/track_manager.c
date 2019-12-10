@@ -18,13 +18,11 @@ void trainset_controller()
 
     train_t train =
     {
-         .current = 1,
-         .dst_head = 7,
-         .dst_tail = 8,
+         .current = 0,
+         .dst = 2,
          .max = DEF_SPEED,
          .state = INIT,
-         .sw_active = 0,
-         .sw_queue = 0,
+         .sw_active = 0
     };
 
     // Receive initializing data from user
@@ -35,13 +33,38 @@ void trainset_controller()
     train.max = (train.max == 0) ? DEF_SPEED : train.max;    // Not allow user to set max speed to 0
 
     // Runs train until it reaches its set location
-    run_train(&train);
+
+//    run_train(&train);
 
     // reduce process' scheduling priority
     nice(LOWEST_PRIORITY);
 
     // Idle process
-    while (1) {}
+    train.ctrl.dir = CW;
+    train.ctrl.mag = DEF_SPEED;
+
+    driveTrain(0xFF, train.ctrl.arg);
+
+    uint8_t rx_data[PACKET_DATA_MAX];
+    train_msg_t* rx_msg = (train_msg_t*)rx_data;
+
+    while (1) {
+        recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
+
+        if (rx_msg->code == SENSOR_TRIGGERED) {
+            if (rx_msg->arg1 == 10) {
+                driveTrain(0xFF, BREAK);
+
+                train.ctrl.dir = CCW;
+                driveTrain(0xFF, train.ctrl.arg);
+            }
+
+            if (train.current != 0) {
+                resetSensors(train.current);
+            }
+            train.current = rx_msg->arg1;
+        }
+    }
 }
 
 /**
@@ -88,9 +111,9 @@ inline targ_t driveTrain(uint8_t train, targ_t ctrl_arg)
 /**
  * @brief   resets all hall sensors triggered.
  */
-inline void resetSensors()
+inline void resetSensors(uint8_t sensor)
 {
-    train_msg_t msg = {.code = SENSOR_RESET, .arg1 = 0xFF, .arg2 = 0};
+    train_msg_t msg = {.code = SENSOR_RESET, .arg1 = sensor, .arg2 = 0};
     send(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t));
 }
 
@@ -105,6 +128,8 @@ void run_train(train_t* train)
     uint8_t rx_data[PACKET_DATA_MAX];
     train_msg_t* rx_msg = (train_msg_t*)rx_data;
 
+    char num_buf[INT_BUF];
+
     // Set the train state to be moving
     train->state = MOVING;
 
@@ -114,17 +139,21 @@ void run_train(train_t* train)
 
 //        send(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t));
 
-        // Receive messages from the train track
-        recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
+        rx_msg->code = 0;
+        while (rx_msg->code != SENSOR_TRIGGERED) {
+            // Receive messages from the train track
+            recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
 
+        }
 //        request(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t), rx_data, PACKET_DATA_MAX);
 
-        if (rx_msg->code == SENSOR_TRIGGERED) {
-            // Train has moved past a hall sensor
-            // Update the train's current sensor location
-            train->current = rx_msg->arg1;
-//            send(USER_BOX, TRACK_BOX, &train->current, 1);
-        }
+        // Train has moved past a hall sensor
+        // Update the train's current sensor location
+        train->current = rx_msg->arg1;
+
+//        UART0_puts("Train is at sensor #");
+//        UART0_puts(itoa(rx_msg->arg1, num_buf));
+//        UART0_puts("\n");
     }
 }
 
@@ -132,34 +161,36 @@ void run_train(train_t* train)
  * @brief   Analysis the current route of a train
  * @param   [in, out] train: Pointer to train structure whose route will be analyzed.
  */
-void routeAnalysis(train_t* train)
+inline void routeAnalysis(train_t* train)
 {
     // Retrieve current route from table
-    route_t* route = (train->current == train->dst_tail) ?
-            accessRoute(train->current-1, train->dst_head-1) :  // If passed the tail of the destination
-            accessRoute(train->current-1, train->dst_tail-1);
+    route_t* route = accessRoute(train->current-1, train->dst-1);
 
     // Set up train speed and direction
     if (route->code == DONE) {
         // Train's destination has been reached
         train->state = DESTINATION;
         train->ctrl.arg = BREAK;
+//        driveTrain(0xFF, train->ctrl.arg);
         // reset sensors?
+//        driveTrain(0xFF, train->ctrl.arg);
+        UART0_puts("Train at destination!!\n\n");
     }
     else {
         train->ctrl.dir = route->prog.dir;
         train->ctrl.mag = train->max;
+//        driveTrain(0xFF, train->ctrl.arg);
     }
+
+    driveTrain(0xFF, train->ctrl.arg);
 
     // Set up switch configuration
     if (route->prog.sw != 0) {
         divertSwitch(route->prog.sw);
 
-        if (train->sw_queue != 0)   resetSwitch(train->sw_queue);
-        if (train->sw_active != 0)  train->sw_queue = train->sw_active;
+        // Resolve the switch reset queueing
+        if (train->sw_active != 0)  resetSwitch(train->sw_active);
 
         train->sw_active = route->prog.sw;
     }
-
-    driveTrain(0xFF, train->ctrl.arg);
 }
