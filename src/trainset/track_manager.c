@@ -26,7 +26,7 @@ void trainset_controller()
     };
 
     // Receive initializing data from user
-//    recv(12, TRACK_BOX, &train, sizeof(train_t), NULL);
+    recv(12, TRACK_BOX, &train, sizeof(train_t), NULL);
 
     // Initialize train state
     train.state = INIT;
@@ -34,37 +34,7 @@ void trainset_controller()
 
     // Runs train until it reaches its set location
 
-//    run_train(&train);
-
-    // reduce process' scheduling priority
-    nice(LOWEST_PRIORITY);
-
-    // Idle process
-    train.ctrl.dir = CW;
-    train.ctrl.mag = DEF_SPEED;
-
-    driveTrain(0xFF, train.ctrl.arg);
-
-    uint8_t rx_data[PACKET_DATA_MAX];
-    train_msg_t* rx_msg = (train_msg_t*)rx_data;
-
-    while (1) {
-        recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
-
-        if (rx_msg->code == SENSOR_TRIGGERED) {
-            if (rx_msg->arg1 == 10) {
-                driveTrain(0xFF, BREAK);
-
-                train.ctrl.dir = CCW;
-                driveTrain(0xFF, train.ctrl.arg);
-            }
-
-            if (train.current != 0) {
-                resetSensors(train.current);
-            }
-            train.current = rx_msg->arg1;
-        }
-    }
+    run_train(&train);
 }
 
 /**
@@ -137,23 +107,15 @@ void run_train(train_t* train)
         // Analyze route to know in which direction to go & speed, and if destination has been reached.
         routeAnalysis(train);
 
-//        send(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t));
-
         rx_msg->code = 0;
         while (rx_msg->code != SENSOR_TRIGGERED) {
             // Receive messages from the train track
             recv(TRACK_BOX, PACKET_BOX, rx_data, PACKET_DATA_MAX, NULL);
-
         }
-//        request(PACKET_BOX, TRACK_BOX, (uint8_t*)&msg, sizeof(train_msg_t), rx_data, PACKET_DATA_MAX);
 
         // Train has moved past a hall sensor
         // Update the train's current sensor location
         train->current = rx_msg->arg1;
-
-//        UART0_puts("Train is at sensor #");
-//        UART0_puts(itoa(rx_msg->arg1, num_buf));
-//        UART0_puts("\n");
     }
 }
 
@@ -171,15 +133,11 @@ inline void routeAnalysis(train_t* train)
         // Train's destination has been reached
         train->state = DESTINATION;
         train->ctrl.arg = BREAK;
-//        driveTrain(0xFF, train->ctrl.arg);
-        // reset sensors?
-//        driveTrain(0xFF, train->ctrl.arg);
         UART0_puts("Train at destination!!\n\n");
     }
     else {
         train->ctrl.dir = route->prog.dir;
         train->ctrl.mag = train->max;
-//        driveTrain(0xFF, train->ctrl.arg);
     }
 
     driveTrain(0xFF, train->ctrl.arg);

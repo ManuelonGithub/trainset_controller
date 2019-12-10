@@ -30,11 +30,11 @@ int main(void)
 
     /* Place Process Create requests here */
     process_attr_t attr = {.id = 0, .priority = HIGH_PRIORITY, .name = "Packet Server", .arg = NULL};
-//    pcreate(&attr, &packet_server);
-//
-//    attr.priority = USER_PRIORITY;
-//    strcpy(attr.name, "Track Server");
-//    pcreate(&attr, &trainset_controller);
+    pcreate(&attr, &packet_server);
+
+    attr.priority = USER_PRIORITY;
+    strcpy(attr.name, "Track Server");
+    pcreate(&attr, &trainset_controller);
 
     attr.priority = HIGH_PRIORITY;
     strcpy(attr.name, "IO proccess");
